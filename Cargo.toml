@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "suiflash-bot",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+license = "Apache-2.0"
+authors = ["SuiFlash Contributors"]
+repository = "https://github.com/longcipher/suiflash"
+description = "SuiFlash workspace: suiflash-bot (Rust backend) + suiflash-contract (Move)"

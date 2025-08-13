@@ -1,0 +1,10 @@
+[package]
+name = "suiflash_router"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui", subdir = "crates/sui-framework/packages/sui-framework", rev = "main" }
+
+[addresses]
+suiflash =  "0x0" # to be replaced at publish time (renamed from `router`)

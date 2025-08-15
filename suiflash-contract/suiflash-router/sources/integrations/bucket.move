@@ -49,10 +49,8 @@ module suiflash::bucket_integration {
         };
 
         // In a real implementation, this would call Bucket Protocol's flash_borrow
-        // For now, we create a coin with the requested amount
-        // Using test creation pattern for development
-        let borrowed_coin = coin::zero<T>(ctx);
-        // Simulate borrowed amount - in production this comes from Bucket
+        // For testing, we create a zero coin and let tests provide actual repayment
+        let borrowed_coin = sui::coin::zero<T>(ctx);
         
         (borrowed_coin, receipt)
     }

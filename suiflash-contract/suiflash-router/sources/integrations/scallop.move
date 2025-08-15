@@ -46,8 +46,9 @@ module suiflash::scallop_integration {
     /// In production, this calls:
     /// `protocol::flash_loan::borrow_flash_loan<T>(version, market, amount, ctx)`
     public fun borrow<CoinType>(amount: u64, ctx: &mut TxContext): (Coin<CoinType>, ScallopFlashLoanReceipt<CoinType>) {
-        // Placeholder: Create zero coin and receipt
-        let coin = coin::zero<CoinType>(ctx);
+                // For testing purposes, return a zero-value coin  
+        // In production, this would interface with actual Scallop Protocol
+        let coin = sui::coin::zero<CoinType>(ctx);
         let fee = calculate_fee(amount);
         let asset_type = type_name::get<CoinType>();
         let market_id = object::id_from_address(@0x0); // Placeholder market ID
@@ -80,11 +81,11 @@ module suiflash::scallop_integration {
         assert!(receipt.asset_type == expected_type, errors::asset_type_mismatch()); // Asset type mismatch
         
         // In real implementation: call protocol::flash_loan::repay_flash_loan
-        // For now: destroy receipt and return remaining balance
+        // For now: destroy receipt and handle coins
         let ScallopFlashLoanReceipt { amount: _, fee: _, asset_type: _, market_id: _ } = receipt;
         
-        // Merge loan coin (unused in placeholder) and return repay coin
-        coin::destroy_zero(loan_coin);
+        // Transfer loan coin to burn address and return repay coin
+        sui::transfer::public_transfer(loan_coin, @0x0);
         repay_coin
     }
 

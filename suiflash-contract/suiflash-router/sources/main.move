@@ -4,14 +4,10 @@ module suiflash::flash_router {
     use sui::event;
     use suiflash::errors;
     use suiflash::state::{Config, service_fee_bps, assert_not_paused};
-    use suiflash::scallop_integration; // fee stubs
-    use suiflash::navi_integration;
-    use suiflash::bucket_integration;
+    use suiflash::protocols::{protocol_fee_bps, borrow_with_receipt, settle_with_receipt};
     use suiflash::interfaces::invoke_callback_amount as invoke_callback;
 
-    const PROTOCOL_NAVI: u64 = 0;
-    const PROTOCOL_BUCKET: u64 = 1;
-    const PROTOCOL_SCALLOP: u64 = 2;
+    // (legacy constants removed; use re-exports at bottom sourced from protocols module)
 
     /// Event emitted after successful flash loan (placeholder fields only)
     public struct FlashLoanEvent has copy, drop, store {
@@ -24,11 +20,11 @@ module suiflash::flash_router {
 
     /// Core entry: picks protocol, validates amount, calculates fees.
     /// Placeholder: does not actually transfer coins; integrates after real protocol APIs available.
-    public entry fun flash_loan(cfg: &Config, protocol: u64, amount: u64, recipient: address, payload: vector<u8>, ctx: &mut TxContext) {
+    entry fun flash_loan(cfg: &Config, protocol: u64, amount: u64, recipient: address, payload: vector<u8>, ctx: &mut TxContext) {
         assert_not_paused(cfg);
         if (amount == 0) { abort errors::amount_too_low() };
 
-        let proto_fee_bps = match_protocol_fee(protocol);
+    let proto_fee_bps = protocol_fee_bps(protocol);
         let proto_fee = amount * proto_fee_bps / 10_000;
         let svc_fee_bps = service_fee_bps(cfg);
         let svc_fee = amount * svc_fee_bps / 10_000;
@@ -44,44 +40,45 @@ module suiflash::flash_router {
     }
 
     /// New coin-based variant (generic on CoinType) using coin callback interface.
-    /// Placeholder: mints a dummy Coin<CoinType> of requested amount (NOT SECURE, DEV ONLY), passes to callback,
-    /// validates returned coin value >= required total, burns protocol/service fee portions (TODO) and emits event.
-    public entry fun flash_loan_coin<CoinType>(cfg: &Config, protocol: u64, amount: u64, recipient: address, payload: vector<u8>, ctx: &mut TxContext) {
-        use sui::coin;
+    /// Now supports Navi-style receipt-based flash loans with proper settlement.
+    entry fun flash_loan_coin<CoinType>(cfg: &Config, protocol: u64, amount: u64, recipient: address, payload: vector<u8>, ctx: &mut TxContext) {
         use sui::transfer;
+        use sui::coin;
         use suiflash::interfaces::invoke_callback_coin;
 
         assert_not_paused(cfg);
         if (amount == 0) { abort errors::amount_too_low() };
-        let proto_fee_bps = match_protocol_fee(protocol);
+        let proto_fee_bps = protocol_fee_bps(protocol);
         let proto_fee = amount * proto_fee_bps / 10_000;
         let svc_fee_bps = service_fee_bps(cfg);
         let svc_fee = amount * svc_fee_bps / 10_000;
-    let _total = amount + proto_fee + svc_fee; // placeholder unused
+        let total_required = amount + proto_fee + svc_fee;
 
-        // DEV ONLY: fabricate loan coin via zero-creation pattern (would call real protocol). We produce an empty coin then add balance.
-    // Fabricate loan coin (DEV ONLY). Replace with real protocol withdraw. For now create a zero coin then pretend it has amount via unsafe pattern.
-    let loan = coin::zero<CoinType>(ctx); // value 0 placeholder
-    // NOTE: Cannot arbitrarily mint in production; for tests a faucet / protocol integration will supply coin with 'amount'.
+        // Borrow via protocol adapter with receipt for proper settlement
+        let (loan, receipt_bytes) = borrow_with_receipt<CoinType>(protocol, amount, ctx);
 
-        // Invoke user callback.
-    let returned0 = invoke_callback_coin(recipient, loan, payload, ctx);
-    let returned_amount = amount; // placeholder: cannot measure (no real borrow logic)
+        // Invoke user callback with borrowed funds
+        let returned_coin = invoke_callback_coin(recipient, loan, payload, ctx);
 
-        // Placeholder: protocol & service fees handling—burn fees; in prod: repay protocol & send svc fee to treasury.
-    // TODO: split returned into protocol fee, service fee, principal. Placeholder: event only.
-    // coin already moved into returned0; placeholder no further processing
+        // Settle the flash loan using protocol-specific logic and receipt
+        // Note: create a zero coin as placeholder for loan since it was consumed by callback
+        let placeholder_loan = coin::zero<CoinType>(ctx);
+        let settled = settle_with_receipt<CoinType>(protocol, placeholder_loan, receipt_bytes, returned_coin, ctx);
 
-    let ev = FlashLoanEvent { protocol, amount, protocol_fee: proto_fee, service_fee: svc_fee, total_repayment: returned_amount };
-    event::emit(ev);
-    // Ensure coin is consumed: transfer to recipient (using public_transfer since Coin<T> has store)
-    transfer::public_transfer(returned0, recipient);
-    }
+        // Verify sufficient repayment (for protocols that don't enforce internally)
+        let returned_amount = coin::value(&settled);
+        if (returned_amount < total_required) { abort errors::insufficient_repayment() };
 
-    fun match_protocol_fee(protocol: u64): u64 {
-        if (protocol == PROTOCOL_NAVI) { navi_integration::fee_bps() }
-        else if (protocol == PROTOCOL_BUCKET) { bucket_integration::fee_bps() }
-        else if (protocol == PROTOCOL_SCALLOP) { scallop_integration::fee_bps() }
-        else { abort errors::invalid_protocol() }
-    }
+        let ev = FlashLoanEvent { 
+            protocol, 
+            amount, 
+            protocol_fee: proto_fee, 
+            service_fee: svc_fee, 
+            total_repayment: returned_amount 
+        };
+        event::emit(ev);
+        
+        // Transfer final settlement to recipient
+        transfer::public_transfer(settled, recipient);
+    }    // Re‑export constants removed to prevent duplicate symbol warnings; use suiflash::protocols::PROTOCOL_* instead.
 }

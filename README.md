@@ -194,6 +194,21 @@ suiflash/
 	suiflash-bot/      (Rust Artemis backend)
 ```
 
+## Navi Protocol
+
+### Protocol Docs
+
+* <https://naviprotocol.gitbook.io/navi-protocol-docs/developers-docs/hackathon-overflow-navi-bounty>
+* <https://naviprotocol.gitbook.io/navi-protocol-docs/getting-started/flash-loan>
+
+### Protocol Interfaces
+
+* <https://github.com/naviprotocol/protocol-interface/blob/main/lending_core/sources/flash_loan.move>
+
+### Protocol SDKs
+
+* <https://github.com/naviprotocol/navi-sdk/blob/main/src/libs/PTB/commonFunctions.ts>
+
 ## 📝 License
 
 Apache-2.0 (or compatible) – ensure compliance when distributing derivatives.

@@ -1,0 +1,33 @@
+# SuiFlash Bot Configuration Example
+# Copy this file to config.toml and update with your actual values
+
+# Sui Network Configuration
+sui_rpc_url = "https://fullnode.testnet.sui.io:443"  # Can also use SUIFLASH_SUI_RPC_URL
+private_key = "YOUR_PRIVATE_KEY_HERE"                # Can also use SUIFLASH_PRIVATE_KEY
+
+# SuiFlash Contract Configuration
+sui_flash_package_id = "0x1234567890abcdef1234567890abcdef12345678"       # Can also use SUIFLASH_SUI_FLASH_PACKAGE_ID
+sui_flash_config_object_id = "0xabcdef1234567890abcdef1234567890abcdef12" # Can also use SUIFLASH_SUI_FLASH_CONFIG_OBJECT_ID
+
+# Server Configuration
+server_port = 3000          # Can also use SUIFLASH_SERVER_PORT
+refresh_interval_ms = 10000 # Can also use SUIFLASH_REFRESH_INTERVAL_MS
+
+# Strategy Configuration
+# Options: "cheapest", "highest_liquidity"
+strategy = "cheapest"       # Can also use SUIFLASH_STRATEGY
+
+# Protocol Package IDs
+contract_package_id = "0x1111111111111111111111111111111111111111" # Can also use SUIFLASH_CONTRACT_PACKAGE_ID
+navi_package_id = "0x2222222222222222222222222222222222222222"     # Can also use SUIFLASH_NAVI_PACKAGE_ID
+bucket_package_id = "0x3333333333333333333333333333333333333333"   # Can also use SUIFLASH_BUCKET_PACKAGE_ID
+scallop_package_id = "0x4444444444444444444444444444444444444444"  # Can also use SUIFLASH_SCALLOP_PACKAGE_ID
+
+# Service fee in basis points (40 = 0.40%)
+service_fee_bps = 40        # Can also use SUIFLASH_SERVICE_FEE_BPS
+
+# Configuration Priority (highest to lowest):
+# 1. Environment variables with SUIFLASH_ prefix
+# 2. Legacy environment variables (for backward compatibility)
+# 3. Values from config.toml file
+# 4. Default values

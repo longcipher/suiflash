@@ -1,24 +1,36 @@
 use artemis::types::Executor;
 use async_trait::async_trait;
 use eyre::Result;
-// sui_sdk imports trimmed to essentials for placeholder PTB structure
-use sui_sdk::types::base_types::{ObjectID, SuiAddress};
-use sui_sdk::types::programmable_transaction_builder::ProgrammableTransactionBuilder;
-use tracing::{debug, error, info};
+use sui_sdk::{SuiClient, SuiClientBuilder};
+use sui_types::base_types::SuiAddress;
+use tracing::{debug, error, info, warn};
 
-use crate::{config::Config, strategies::ExecutionPlan};
+use crate::{
+    config::{Config, Protocol},
+    strategies::ExecutionPlan,
+};
 
 #[derive(Clone)]
 pub struct FlashLoanExecutor {
+    client: SuiClient,
     config: Config,
-    // Lazy init; simple Option so we don't block clonability with client internals.
-    // For production wrap in Arc and reuse.
-    // client removed in placeholder mode
+    _signer_address: SuiAddress,
 }
 
 impl FlashLoanExecutor {
-    pub fn new(config: Config) -> Self {
-        Self { config }
+    pub async fn new(config: Config) -> Result<Self> {
+        let sui_client = SuiClientBuilder::default()
+            .build(&config.sui_rpc_url)
+            .await?;
+
+        // For testing, use a random address - in production would derive from private key
+        let signer_address = SuiAddress::random_for_testing_only();
+
+        Ok(Self {
+            client: sui_client,
+            config,
+            _signer_address: signer_address,
+        })
     }
 
     /// Execute a flash loan according to the execution plan
@@ -27,122 +39,223 @@ impl FlashLoanExecutor {
             "Executing flash loan: protocol={:?}, amount={}, cost={}",
             plan.protocol, plan.amount, plan.total_cost
         );
-        if let Some(rec) = &plan.callback_recipient {
-            debug!("callback_recipient={}", rec);
-        }
 
-        // Build the Programmable Transaction Block (PTB)
-        let ptb = self.build_ptb(plan).await?;
+        // For now, simulate the transaction execution
+        // In production, this would:
+        // 1. Build real PTB with flash_loan call
+        // 2. Get gas coins and estimate gas
+        // 3. Sign transaction with private key
+        // 4. Submit to network and wait for confirmation
 
-        // Sign and submit the transaction
-        let tx_digest = self.submit_transaction(ptb).await?;
+        let tx_digest = self.simulate_transaction_execution(plan).await?;
 
         info!("Flash loan transaction submitted: {}", tx_digest);
         Ok(tx_digest)
     }
 
-    async fn build_ptb(&self, plan: &ExecutionPlan) -> Result<Vec<u8>> {
-        // Placeholder: In production, this would construct a proper PTB
-        // that calls the Move contract with the selected protocol
-
-        debug!("Building PTB for protocol {:?}", plan.protocol);
-
-        // PTB would include:
-        // 1. Call flash_loan function on the Move contract
-        // 2. Include user's operation logic
-        // 3. Ensure repayment with fees
-
-        let ptb_bytes = self.construct_ptb_bytes(plan).await?;
-        Ok(ptb_bytes)
-    }
-
-    async fn construct_ptb_bytes(&self, plan: &ExecutionPlan) -> Result<Vec<u8>> {
-        // Minimal PTB: call flash_router::flash_loan(ConfigObject, protocol, amount, recipient, payload)
-        // NOTE: Updated Move signature now includes payload (vector<u8>). We still pass placeholder empty payload here.
-        let _package_id = &self.config.sui_flash_package_id; // expecting module suiflash::flash_router deployed here
-        let _module = "flash_router";
-        let _function = "flash_loan";
-        let _type_args: Vec<sui_sdk::types::TypeTag> = vec![]; // genericless for now
-
-        // Convert inputs: Config object ID, protocol (u64), amount (u64), recipient address
-        let cfg_obj = ObjectID::from_hex_literal(&self.config.sui_flash_config_object_id)?;
-        let _protocol_u64 = plan.protocol as u64;
-        let _amount_u64 = plan.amount;
-        // For prototype we pass the bot's own address as recipient (will callback to itself placeholder)
-        // Real implementation should use user-provided contract address.
-        // We leave it as the config treasury placeholder (reuse config contract_package_id for now).
-        let recipient_addr = SuiAddress::from(ObjectID::from_hex_literal(
-            &self.config.contract_package_id,
-        )?);
-
-        let mut builder = ProgrammableTransactionBuilder::new();
-        // Add object reference argument for Config shared object (placeholder, as we don't fetch latest ref here)
-        // Until we resolve object refs we use pure args only (NOT valid on-chain but enough for structural preview)
-        let _cfg_arg = builder
-            .pure(cfg_obj)
-            .map_err(|e| eyre::eyre!("pure arg cfg failed: {e}"))?; // placeholder
-        let _recipient_arg = builder
-            .pure(recipient_addr)
-            .map_err(|e| eyre::eyre!("pure arg recipient failed: {e}"))?;
-        let _protocol_arg = builder
-            .pure(_protocol_u64)
-            .map_err(|e| eyre::eyre!("pure arg protocol failed: {e}"))?;
-        let _amount_arg = builder
-            .pure(_amount_u64)
-            .map_err(|e| eyre::eyre!("pure arg amount failed: {e}"))?;
-        let payload_bytes: Vec<u8> = plan
-            .callback_payload
-            .as_ref()
-            .map(|s| s.as_bytes().to_vec())
-            .unwrap_or_default();
-        let _payload_arg = builder
-            .pure(payload_bytes)
-            .map_err(|e| eyre::eyre!("pure arg payload failed: {e}"))?;
-        // NOTE: current SDK version path for move_call Identifier unresolved in this workspace snapshot.
-        // Leaving a placeholder serialized empty PTB until SDK API is confirmed; keeping args above for reference.
-        Ok(vec![0u8; 48])
-    }
-
-    async fn submit_transaction(&self, ptb_bytes: Vec<u8>) -> Result<String> {
+    /// Simulate transaction execution for testing and development
+    async fn simulate_transaction_execution(&self, plan: &ExecutionPlan) -> Result<String> {
         debug!(
-            "Prepared PTB bytes length={} (not submitted - prototype mode)",
-            ptb_bytes.len()
+            "Simulating transaction execution for protocol {:?}",
+            plan.protocol
         );
-        // Prototype: return a pseudo hash derived from bytes length
-        Ok(format!(
-            "0x{}",
-            hex::encode(&blake3::hash(&ptb_bytes).as_bytes()[0..8])
-        ))
+
+        // Validate the execution plan
+        Self::validate_execution_plan(plan)?;
+
+        // Build transaction structure (for validation/testing)
+        let _ptb_structure = self.build_transaction_structure(plan).await?;
+
+        // Simulate gas estimation
+        let estimated_gas = self.estimate_gas_cost(plan).await?;
+        debug!("Estimated gas cost: {}", estimated_gas);
+
+        // Generate simulated transaction digest
+        let tx_content = format!(
+            "{}:{}:{}:{}",
+            plan.protocol as u64, plan.amount, plan.total_cost, plan.user_operation
+        );
+
+        let hash = blake3::hash(tx_content.as_bytes());
+        let tx_digest = format!("0x{}", hex::encode(&hash.as_bytes()[0..32]));
+
+        debug!("Generated simulated transaction digest: {}", tx_digest);
+        Ok(tx_digest)
+    }
+
+    /// Validate the execution plan before processing
+    /// Validate execution plan parameters
+    fn validate_execution_plan(plan: &ExecutionPlan) -> Result<()> {
+        if plan.amount == 0 {
+            return Err(eyre::eyre!("Flash loan amount cannot be zero"));
+        }
+
+        if plan.total_cost <= plan.amount {
+            return Err(eyre::eyre!(
+                "Total cost must be greater than amount (missing fees)"
+            ));
+        }
+
+        if plan.user_operation.is_empty() {
+            warn!("Empty user operation - flash loan may not be useful");
+        }
+
+        debug!("Execution plan validation passed");
+        Ok(())
+    }
+
+    /// Build transaction structure for validation
+    async fn build_transaction_structure(
+        &self,
+        plan: &ExecutionPlan,
+    ) -> Result<TransactionStructure> {
+        debug!(
+            "Building transaction structure for protocol {:?}",
+            plan.protocol
+        );
+
+        let package_id = self.config.sui_flash_package_id.clone();
+        let config_object_id = self.config.sui_flash_config_object_id.clone();
+
+        // Prepare function call details
+        let module_name = "flash_router";
+        let function_name = "flash_loan";
+        let type_args = vec!["0x2::sui::SUI".to_string()]; // Assume SUI for now
+
+        // Prepare arguments
+        let args = vec![
+            format!("config:{}", config_object_id),
+            format!("protocol:{}", plan.protocol as u64),
+            format!("amount:{}", plan.amount),
+            format!(
+                "recipient:{}",
+                plan.callback_recipient.as_deref().unwrap_or("0x0")
+            ),
+            format!("payload:{}", plan.callback_payload.as_deref().unwrap_or("")),
+        ];
+
+        let tx_structure = TransactionStructure {
+            _package_id: package_id,
+            _module_name: module_name.to_string(),
+            _function_name: function_name.to_string(),
+            _type_args: type_args,
+            _args: args,
+        };
+
+        debug!("Transaction structure built: {:?}", tx_structure);
+        Ok(tx_structure)
     }
 
     /// Verify that a flash loan execution was successful
     pub async fn verify_execution(&self, tx_digest: &str) -> Result<bool> {
         debug!("Verifying transaction: {}", tx_digest);
 
-        // In production, this would check the transaction effects
-        // to ensure the flash loan was properly executed and repaid
+        // For simulation mode, perform basic validation
+        if !tx_digest.starts_with("0x") || tx_digest.len() != 66 {
+            return Ok(false);
+        }
 
-        // Use a proper SUI client to check transaction status
-        // sui_client.read_api().get_transaction_with_options()
+        // In production, this would:
+        // 1. Query transaction details from Sui network
+        // 2. Check transaction status and effects
+        // 3. Verify FlashLoanExecuted event was emitted
+        // 4. Confirm proper fee payment
 
-        Ok(true) // Placeholder
+        info!("Transaction verification completed: {}", tx_digest);
+        Ok(true)
     }
 
     /// Handle execution errors and potential rollbacks
     pub async fn handle_execution_error(&self, plan: &ExecutionPlan, error: &str) -> Result<()> {
         error!("Flash loan execution failed for plan {:?}: {}", plan, error);
 
+        // Log detailed error information
+        info!("Failed execution details:");
+        info!("  Protocol: {:?}", plan.protocol);
+        info!("  Amount: {}", plan.amount);
+        info!("  Total Cost: {}", plan.total_cost);
+        info!("  User Operation: {}", plan.user_operation);
+
+        if let Some(recipient) = &plan.callback_recipient {
+            info!("  Callback Recipient: {}", recipient);
+        }
+
         // In production, this might:
-        // 1. Log the failure for analysis
-        // 2. Update metrics
-        // 3. Attempt recovery if possible
-        // 4. Notify monitoring systems
+        // 1. Update failure metrics and monitoring
+        // 2. Trigger alerts for repeated failures
+        // 3. Attempt automatic recovery if possible
+        // 4. Log to external error tracking systems
 
         Ok(())
     }
+
+    /// Estimate gas cost for a flash loan execution
+    pub async fn estimate_gas_cost(&self, plan: &ExecutionPlan) -> Result<u64> {
+        debug!("Estimating gas cost for execution plan");
+
+        // Base costs for different operations
+        let base_transaction_cost = 1_000_000; // ~0.001 SUI
+        let flash_loan_base_cost = 2_000_000; // ~0.002 SUI
+        let protocol_overhead = match plan.protocol {
+            Protocol::Navi => 1_500_000,
+            Protocol::Bucket => 1_200_000,
+            Protocol::Scallop => 1_800_000,
+        };
+
+        // Additional cost for user callback
+        let callback_cost = if plan.callback_recipient.is_some() {
+            5_000_000 // ~0.005 SUI for user callback execution
+        } else {
+            0
+        };
+
+        // Scale with amount (larger amounts may require more gas for computation)
+        let amount_scaling = (plan.amount / 1_000_000_000).max(1); // Scale per SUI
+        let scaling_cost = amount_scaling * 100_000; // Small additional cost per SUI
+
+        let total_estimate = base_transaction_cost
+            + flash_loan_base_cost
+            + protocol_overhead
+            + callback_cost
+            + scaling_cost;
+
+        debug!("Gas cost breakdown:");
+        debug!("  Base: {}", base_transaction_cost);
+        debug!("  Flash loan: {}", flash_loan_base_cost);
+        debug!("  Protocol overhead: {}", protocol_overhead);
+        debug!("  Callback: {}", callback_cost);
+        debug!("  Scaling: {}", scaling_cost);
+        debug!("  Total estimate: {}", total_estimate);
+
+        Ok(total_estimate)
+    }
+
+    /// Get current network gas price
+    pub async fn get_gas_price(&self) -> Result<u64> {
+        match self.client.read_api().get_reference_gas_price().await {
+            Ok(price) => {
+                debug!("Current network gas price: {}", price);
+                Ok(price)
+            }
+            Err(e) => {
+                warn!("Failed to get network gas price, using default: {}", e);
+                Ok(1000) // Default gas price
+            }
+        }
+    }
 }
 
-// Artemis Executor implementation (placeholder structure)
+/// Structure representing a transaction for validation and testing
+#[derive(Debug, Clone)]
+struct TransactionStructure {
+    _package_id: String,
+    _module_name: String,
+    _function_name: String,
+    _type_args: Vec<String>,
+    _args: Vec<String>,
+}
+
+// Artemis Executor implementation
 #[async_trait]
 impl Executor<ExecutionPlan> for FlashLoanExecutor {
     async fn execute(&self, action: ExecutionPlan) -> Result<()> {
@@ -153,6 +266,7 @@ impl Executor<ExecutionPlan> for FlashLoanExecutor {
                 // Verify execution
                 if !self.verify_execution(&tx_digest).await? {
                     error!("Flash loan execution verification failed for {}", tx_digest);
+                    return Err(eyre::eyre!("Transaction verification failed"));
                 }
 
                 Ok(())

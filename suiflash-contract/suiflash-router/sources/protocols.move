@@ -1,4 +1,4 @@
-#[allow(duplicate_alias)]
+#[allow(duplicate_alias, lint(abort_without_constant))]
 module suiflash::protocols {
     /*! Protocol Abstraction Layer
 

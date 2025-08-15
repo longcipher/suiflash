@@ -1,5 +1,5 @@
-#[allow(duplicate_alias)]
-module suiflash::flash_router {
+#[allow(duplicate_alias, lint(abort_without_constant))]
+module suiflash::main {
     use sui::tx_context::TxContext;
     use sui::event;
     use suiflash::errors;

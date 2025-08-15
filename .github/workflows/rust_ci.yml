@@ -1,0 +1,75 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'suiflash-bot/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'Justfile'
+      - '.github/workflows/rust_ci.yml'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'suiflash-bot/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'Justfile'
+      - '.github/workflows/rust_ci.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: rust-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  rust:
+    name: Rust Format, Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchains
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install tooling crates (taplo, cargo-machete, just)
+        run: |
+          cargo install taplo-cli --locked || true
+          cargo install cargo-machete --locked || true
+          cargo install just --locked || true
+
+      - name: Format check (TOML + Rust)
+        run: |
+          taplo fmt --check
+          cargo +nightly fmt --all -- --check
+
+      - name: Clippy (deny warnings)
+        run: |
+          cargo +nightly clippy --all -- -D warnings -A clippy::derive_partial_eq_without_eq -D clippy::unwrap_used -D clippy::uninlined_format_args
+
+      - name: Unused dependency check (cargo-machete)
+        run: cargo machete
+
+      - name: Test
+        run: cargo test --all --all-features

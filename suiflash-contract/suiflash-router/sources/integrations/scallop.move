@@ -1,4 +1,4 @@
-#[allow(duplicate_alias)]
+#[allow(duplicate_alias, lint(abort_without_constant))]
 module suiflash::scallop_integration {
     //! Scallop Protocol Adapter
     //!
@@ -20,6 +20,7 @@ module suiflash::scallop_integration {
     use std::type_name::{Self, TypeName};
     use sui::tx_context::TxContext;
     use sui::coin::{Self, Coin};
+    use suiflash::errors;
     use sui::object::{Self, ID};
 
     /// Current Scallop protocol base fee: 0.09% (9 basis points)
@@ -72,11 +73,11 @@ module suiflash::scallop_integration {
     ): Coin<CoinType> {
         // Verify repayment amount includes principal + fee
         let required_amount = receipt.amount + receipt.fee;
-        assert!(coin::value(&repay_coin) >= required_amount, 1); // Insufficient repayment
+        assert!(coin::value(&repay_coin) >= required_amount, errors::insufficient_repayment()); // Insufficient repayment
         
         // Verify asset type consistency
         let expected_type = type_name::get<CoinType>();
-        assert!(receipt.asset_type == expected_type, 2); // Asset type mismatch
+        assert!(receipt.asset_type == expected_type, errors::asset_type_mismatch()); // Asset type mismatch
         
         // In real implementation: call protocol::flash_loan::repay_flash_loan
         // For now: destroy receipt and return remaining balance

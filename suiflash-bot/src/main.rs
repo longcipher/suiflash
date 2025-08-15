@@ -6,6 +6,12 @@ mod strategies;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod integration_tests;
+
+#[cfg(test)]
+mod api_tests;
+
 use axum::{
     Router,
     extract::State,
@@ -22,10 +28,10 @@ use tokio::net::TcpListener;
 use tracing::{error, info};
 
 #[derive(Clone)]
-struct AppState {
-    config: Config,
-    strategy: FlashLoanStrategy,
-    executor: FlashLoanExecutor,
+pub struct AppState {
+    pub config: Config,
+    pub strategy: FlashLoanStrategy,
+    pub executor: FlashLoanExecutor,
 }
 
 #[tokio::main]
@@ -33,8 +39,8 @@ async fn main() -> Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt::init();
 
-    // Load configuration
-    let config = Config::from_env()?;
+    // Load configuration from config.toml or fallback to environment variables
+    let config = Config::load().map_err(|e| eyre::eyre!("Failed to load configuration: {}", e))?;
     info!("Starting SuiFlash bot with config: {:?}", config);
     // Touch individual fields to avoid dead_code warnings until they are fully wired.
     let _touch = (
@@ -48,9 +54,9 @@ async fn main() -> Result<()> {
     );
 
     // Initialize components
-    let collector = ProtocolDataCollector::new(config.clone());
+    let collector = ProtocolDataCollector::new(config.clone()).await;
     let strategy = FlashLoanStrategy::new(config.clone(), collector.clone());
-    let executor = FlashLoanExecutor::new(config.clone());
+    let executor = FlashLoanExecutor::new(config.clone()).await?;
 
     // Start background data collection
     let collector_handle = {
@@ -88,7 +94,16 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn handle_flash_loan(
+/// Handle flash loan requests
+///
+/// # Errors
+///
+/// Returns `StatusCode::INTERNAL_SERVER_ERROR` if:
+/// - Data collection fails
+/// - Execution plan generation fails  
+/// - Flash loan execution fails
+/// - Service fee calculation overflows
+pub async fn handle_flash_loan(
     State(state): State<AppState>,
     Json(request): Json<FlashLoanRequest>,
 ) -> Result<Json<FlashLoanResponse>, StatusCode> {
@@ -130,8 +145,13 @@ async fn handle_flash_loan(
 
     // Calculate fees (protocol + service)
     let protocol_fee = execution_plan.total_cost - execution_plan.amount;
-    let service_fee =
-        (execution_plan.amount as u128 * state.config.service_fee_bps as u128 / 10_000) as u64;
+    let service_fee = u64::try_from(
+        u128::from(execution_plan.amount) * u128::from(state.config.service_fee_bps) / 10_000,
+    )
+    .map_err(|_| {
+        error!("Service fee calculation overflow");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
     let total_fee = protocol_fee + service_fee;
 
     let response = FlashLoanResponse {
@@ -146,11 +166,16 @@ async fn handle_flash_loan(
     Ok(Json(response))
 }
 
-async fn handle_health() -> &'static str {
+pub async fn handle_health() -> &'static str {
     "OK"
 }
 
-async fn handle_protocols(
+/// Get available protocols and their data
+///
+/// # Errors
+///
+/// Returns `StatusCode::INTERNAL_SERVER_ERROR` if data collection fails
+pub async fn handle_protocols(
     State(state): State<AppState>,
 ) -> Result<Json<ProtocolsResponse>, StatusCode> {
     let data = state.strategy.collector().get_all_protocol_data().await;
@@ -159,7 +184,14 @@ async fn handle_protocols(
     }))
 }
 
-async fn handle_status(State(state): State<AppState>) -> Result<Json<StatusResponse>, StatusCode> {
+/// Get service status information
+///
+/// # Errors
+///
+/// Returns `StatusCode::INTERNAL_SERVER_ERROR` if data collection fails
+pub async fn handle_status(
+    State(state): State<AppState>,
+) -> Result<Json<StatusResponse>, StatusCode> {
     let map = state.strategy.collector().get_all_protocol_data().await;
     let last_updated_any = map.values().map(|d| d.last_updated).max();
     Ok(Json(StatusResponse {

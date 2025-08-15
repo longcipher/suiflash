@@ -103,21 +103,55 @@ public entry fun execute_operation<CoinType>(
 
 ## ⚙️ Configuration
 
-Environment variables consumed by the bot:
+The bot now uses a layered configuration system (implemented with the `config` crate) that merges multiple sources with a deterministic priority.
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `SUI_RPC_URL` | Fullnode RPC endpoint | `https://fullnode.testnet.sui.io:443` |
-| `PRIVATE_KEY` | Bot signing key (Base64 / hex) | (required) |
-| `SUI_FLASH_PACKAGE_ID` | Published SuiFlash package ID | (required) |
-| `SUI_FLASH_CONFIG_OBJECT_ID` | On‑chain Config object ID | (required) |
-| `SERVER_PORT` | REST server port | `3000` |
-| `REFRESH_INTERVAL_MS` | Collector refresh cadence | `10000` |
-| `STRATEGY` | `cheapest` / `highest_liquidity` | `cheapest` |
-| `CONTRACT_PACKAGE_ID` | Default user callback package (optional) | `0x1` |
-| `NAVI_PACKAGE_ID` | NAVI protocol package id | `0x2` |
-| `BUCKET_PACKAGE_ID` | Bucket protocol package id | `0x3` |
-| `SCALLOP_PACKAGE_ID` | Scallop protocol package id | `0x4` |
+Priority (highest → lowest):
+
+1. Environment variables prefixed with `SUIFLASH_` (e.g. `SUIFLASH_PRIVATE_KEY`)
+2. Legacy environment variables without prefix (backward compatibility)
+3. `config.toml` file (if present in project root)
+4. Built‑in defaults
+
+Minimum required to run: signing key (`private_key` / `SUIFLASH_PRIVATE_KEY`), deployed package & config object IDs.
+
+Supported keys / variables:
+
+| Key / Env Var | Purpose | Default |
+|---------------|---------|---------|
+| `sui_rpc_url` / `SUIFLASH_SUI_RPC_URL` / `SUI_RPC_URL` | Fullnode RPC endpoint | `https://fullnode.testnet.sui.io:443` |
+| `private_key` / `SUIFLASH_PRIVATE_KEY` / `PRIVATE_KEY` | Bot signing key (hex / Base64) | (required) |
+| `sui_flash_package_id` / `SUIFLASH_SUI_FLASH_PACKAGE_ID` / `SUI_FLASH_PACKAGE_ID` | Published SuiFlash package ID | (required) |
+| `sui_flash_config_object_id` / `SUIFLASH_SUI_FLASH_CONFIG_OBJECT_ID` / `SUI_FLASH_CONFIG_OBJECT_ID` | On‑chain Config object ID | (required) |
+| `server_port` / `SUIFLASH_SERVER_PORT` / `SERVER_PORT` | REST server port | `3000` |
+| `refresh_interval_ms` / `SUIFLASH_REFRESH_INTERVAL_MS` / `REFRESH_INTERVAL_MS` | Collector refresh cadence (ms) | `10000` |
+| `strategy` / `SUIFLASH_STRATEGY` / `STRATEGY` | `cheapest` or `highest_liquidity` | `cheapest` |
+| `contract_package_id` / `SUIFLASH_CONTRACT_PACKAGE_ID` / `CONTRACT_PACKAGE_ID` | Default user callback package (optional) | `0x1` |
+| `navi_package_id` / `SUIFLASH_NAVI_PACKAGE_ID` / `NAVI_PACKAGE_ID` | NAVI protocol package id | `0x2` |
+| `bucket_package_id` / `SUIFLASH_BUCKET_PACKAGE_ID` / `BUCKET_PACKAGE_ID` | Bucket protocol package id | `0x3` |
+| `scallop_package_id` / `SUIFLASH_SCALLOP_PACKAGE_ID` / `SCALLOP_PACKAGE_ID` | Scallop protocol package id | `0x4` |
+| `service_fee_bps` / `SUIFLASH_SERVICE_FEE_BPS` / `SERVICE_FEE_BPS` | Aggregator service fee (basis points) | `40` (0.40%) |
+
+Quick start using a file (recommended): copy `suiflash-bot/config.example.toml` to `config.toml` and edit your real IDs / key.
+
+Example minimal `config.toml`:
+
+```toml
+sui_rpc_url = "https://fullnode.testnet.sui.io:443"
+private_key = "<hex_or_base64_private_key>"
+sui_flash_package_id = "0x..."            # deployed package id
+sui_flash_config_object_id = "0x..."       # on-chain config object
+service_fee_bps = 40                       # 0.40%
+strategy = "cheapest"
+```
+
+Override anything at runtime with a prefixed env var, e.g.:
+
+```bash
+export SUIFLASH_REFRESH_INTERVAL_MS=5000
+export SUIFLASH_STRATEGY=highest_liquidity
+```
+
+For deeper detail (validation, examples) see `suiflash-bot/README.md`.
 
 ## 🛣 REST API
 
@@ -136,9 +170,11 @@ curl -X POST http://localhost:3000/flashloan \
 	-d '{
 		"asset": "SUI",
 		"amount": 1000000000,
-		"route_mode": "BestCost",
-		"explicit_protocol": null,
-		"user_operation": "arbitrage:DEXA->DEXB"
+		"route_mode": "BestCost",          // BestCost | BestLiquidity | Explicit
+		"explicit_protocol": null,          // e.g. "Navi" when route_mode = "Explicit"
+		"user_operation": "arbitrage:DEXA->DEXB",
+		"callback_recipient": "0xabc...def", // optional contract handling callback
+		"callback_payload": "base64_or_hex"   // optional opaque payload
 	}'
 ```
 
@@ -187,7 +223,7 @@ sui move build
 
 ## 📦 Project Structure
 
-```
+```text
 suiflash/
 	docs/DESIGN.md
 	suiflash-contract/ (Move package)
@@ -196,73 +232,49 @@ suiflash/
 
 ## Navi Protocol
 
-### Protocol Docs
+### Navi Protocol Docs
 
-* <https://naviprotocol.gitbook.io/navi-protocol-docs/developers-docs/hackathon-overflow-navi-bounty>
-* <https://naviprotocol.gitbook.io/navi-protocol-docs/getting-started/flash-loan>
+- <https://naviprotocol.gitbook.io/navi-protocol-docs/developers-docs/hackathon-overflow-navi-bounty>
+- <https://naviprotocol.gitbook.io/navi-protocol-docs/getting-started/flash-loan>
 
-### Protocol Interfaces
+### Navi Protocol Interfaces
 
-* <https://github.com/naviprotocol/protocol-interface/blob/main/lending_core/sources/flash_loan.move>
+- <https://github.com/naviprotocol/protocol-interface/blob/main/lending_core/sources/flash_loan.move>
 
-### Protocol SDKs
+### Navi Protocol SDKs
 
-* <https://github.com/naviprotocol/navi-sdk/blob/main/src/libs/PTB/commonFunctions.ts>
+- <https://github.com/naviprotocol/navi-sdk/blob/main/src/libs/PTB/commonFunctions.ts>
 
 ## Scallop Protocol
 
-### Protocol Docs
+### Scallop Protocol Docs
 
-* <https://docs.scallop.io/scallop-lend/borrowing>
+- <https://docs.scallop.io/scallop-lend/borrowing>
 
-### Protocol Interfaces
+### Scallop Protocol Interfaces
 
-* <https://github.com/scallop-io/sui-lending-protocol/blob/main/contracts/protocol/sources/user/flash_loan.move>
+- <https://github.com/scallop-io/sui-lending-protocol/blob/main/contracts/protocol/sources/user/flash_loan.move>
 
 ### Protocol SDKs
 
 * <https://github.com/scallop-io/sui-scallop-sdk/blob/main/src/builders/coreBuilder.ts>
 
-### Integration Status
 
-✅ **COMPLETED** - Full Scallop Protocol integration implemented with comprehensive testing
-
-**Features Implemented:**
-- ✅ Flash loan borrow/settle cycle with hot potato pattern
-- ✅ 0.09% fee calculation (9 basis points)
-- ✅ Protocol abstraction layer integration
-- ✅ Asset validation and market configuration
-- ✅ Receipt handling and serialization framework
-- ✅ Comprehensive test suite with 100% pass rate
-- ✅ Error handling and validation logic
-- ✅ Documentation and integration guide
-
-**Files Added/Updated:**
-- `sources/integrations/scallop.move` - Complete Scallop adapter implementation
-- `sources/protocols.move` - Updated dispatch functions for Scallop
-- `sources/tests/scallop_integration_tests_simple.move` - Basic test suite
-- `SCALLOP_INTEGRATION.md` - Comprehensive integration documentation
-
-**Production Readiness:**
-The integration provides a complete framework ready for production deployment. Only configuration updates needed:
-- Replace placeholder addresses with real Scallop deployment addresses
-- Implement BCS serialization for receipt handling
-- Configure real market validation with live Scallop market data
 
 ## Bucket Protocol
 
 ### Protocol Docs
 
-* <https://docs.bucketprotocol.io/mechanisms/flash-loan>
-* <https://docs.bucketprotocol.io/mechanisms/borrowing>
+- <https://docs.bucketprotocol.io/mechanisms/flash-loan>
+- <https://docs.bucketprotocol.io/mechanisms/borrowing>
 
 ### Protocol Interfaces
 
-* <https://github.com/Bucket-Protocol/bucket-interface/blob/main/bucket-protocol/sources/buck.move>
+- <https://github.com/Bucket-Protocol/bucket-interface/blob/main/bucket-protocol/sources/buck.move>
 
-### Protocol SDKs
+### Bucket Protocol SDKs
 
-* <https://github.com/Bucket-Protocol/bucket-protocol-sdk/blob/main/sdk/src/client.ts>
+- <https://github.com/Bucket-Protocol/bucket-protocol-sdk/blob/main/sdk/src/client.ts>
 
 ## 📝 License
 

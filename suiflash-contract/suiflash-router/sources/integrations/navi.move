@@ -1,4 +1,4 @@
-#[allow(duplicate_alias)]
+#[allow(duplicate_alias, lint(abort_without_constant))]
 module suiflash::navi_integration {
     //! Navi Protocol Adapter
     //!
@@ -14,6 +14,7 @@ module suiflash::navi_integration {
 
     use sui::tx_context::TxContext;
     use sui::coin::{Self, Coin};
+    use suiflash::errors;
 
     /// Current Navi treasury fee: 0.06% (6 basis points)
     /// Note: This may change - check AssetConfig for current rates
@@ -48,7 +49,7 @@ module suiflash::navi_integration {
     ): Coin<CoinType> {
         // Verify repayment amount includes principal + fee
         let required_amount = receipt.amount + receipt.fee;
-        assert!(coin::value(&repay_coin) >= required_amount, 1); // Insufficient repayment
+        assert!(coin::value(&repay_coin) >= required_amount, errors::insufficient_repayment()); // Insufficient repayment
         
         // In real implementation: call flash_repay_with_ctx
         // For now: destroy receipt and return remaining balance

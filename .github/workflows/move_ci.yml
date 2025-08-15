@@ -1,0 +1,61 @@
+name: Move CI
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'suiflash-contract/**'
+      - '.github/workflows/move_ci.yml'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'suiflash-contract/**'
+      - '.github/workflows/move_ci.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: move-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  move:
+    name: Move Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Sui build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+            target
+          key: sui-move-${{ runner.os }}-${{ hashFiles('suiflash-contract/suiflash-router/Move.toml') }}
+          restore-keys: sui-move-${{ runner.os }}-
+
+      - name: Install Rust (for building Sui CLI)
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install Sui CLI (build from source)
+        run: |
+          cargo install --locked --git https://github.com/MystenLabs/sui sui || true
+
+      - name: Move Build
+        working-directory: suiflash-contract/suiflash-router
+        run: sui move build
+
+      - name: Move Tests (if any)
+        working-directory: suiflash-contract/suiflash-router
+        run: |
+          if ls sources/tests 2>/dev/null | grep -q ".move"; then
+            sui move test --skip-fetch-latest-git-deps
+          else
+            echo "No Move tests detected; skipping"
+          fi

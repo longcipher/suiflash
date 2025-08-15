@@ -1,4 +1,4 @@
-#[allow(duplicate_alias)]
+#[allow(duplicate_alias, lint(abort_without_constant))]
 module suiflash::registry {
     //! Simplified ProtocolRegistry (sequential append model)
     //! Each appended adapter gets the next numeric protocol_id (index in entries).
@@ -10,6 +10,7 @@ module suiflash::registry {
     use sui::tx_context::TxContext;
     use sui::transfer;
     use suiflash::state::AdminCap;
+    use suiflash::errors;
 
     public struct ProtocolRegistry has key, store { id: UID, entries: vector<address> }
 
@@ -26,13 +27,13 @@ module suiflash::registry {
     /// Update existing adapter in-place (governance controlled)
     entry fun update_adapter(_cap: &AdminCap, reg: &mut ProtocolRegistry, protocol_id: u64, new_adapter_pkg: address) {
         let len = vector::length(&reg.entries);
-    if (protocol_id >= len) { abort 0 };
+    if (protocol_id >= len) { abort errors::index_out_of_bounds() };
         *vector::borrow_mut(&mut reg.entries, protocol_id) = new_adapter_pkg;
     }
 
     public fun adapter(reg: &ProtocolRegistry, protocol_id: u64): address {
         let len = vector::length(&reg.entries);
-    if (protocol_id >= len) { abort 0 }; // out-of-range
+    if (protocol_id >= len) { abort errors::index_out_of_bounds() }; // out-of-range
         *vector::borrow(&reg.entries, protocol_id)
     }
 

@@ -1,8 +1,9 @@
-#[allow(duplicate_alias)]
+#[allow(duplicate_alias, lint(abort_without_constant))]
 module suiflash::state {
     use std::vector;
     use sui::tx_context::TxContext;
     use sui::object;
+    use suiflash::errors;
 
     /// Admin capability (transferable by design, restrict with policy if needed).
     public struct AdminCap has key, store { id: UID }
@@ -18,15 +19,15 @@ module suiflash::state {
     }
 
     public fun create(treasury: address, service_fee_bps: u64, ctx: &mut TxContext): (AdminCap, Config) {
-        assert!(service_fee_bps <= 10_000, 0);
+        assert!(service_fee_bps <= 10_000, errors::invalid_fee_bps());
         (AdminCap { id: object::new(ctx) }, Config { id: object::new(ctx), treasury, service_fee_bps, paused: false, allowed_assets: vector::empty(), protocol_configs: vector::empty() })
     }
 
-    public fun assert_not_paused(cfg: &Config) { assert!(!cfg.paused, 0); }
+    public fun assert_not_paused(cfg: &Config) { assert!(!cfg.paused, errors::paused()); }
 
     public fun set_paused(cap: &AdminCap, cfg: &mut Config, value: bool) { cfg.paused = value; let _ = cap; }
 
-    public fun set_service_fee(cap: &AdminCap, cfg: &mut Config, fee_bps: u64) { assert!(fee_bps <= 10_000, 0); cfg.service_fee_bps = fee_bps; let _ = cap; }
+    public fun set_service_fee(cap: &AdminCap, cfg: &mut Config, fee_bps: u64) { assert!(fee_bps <= 10_000, errors::invalid_fee_bps()); cfg.service_fee_bps = fee_bps; let _ = cap; }
 
     public fun service_fee_bps(cfg: &Config): u64 { cfg.service_fee_bps }
 

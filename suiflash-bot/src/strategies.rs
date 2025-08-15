@@ -15,11 +15,11 @@ pub struct FlashLoanStrategy {
 }
 
 impl FlashLoanStrategy {
-    pub fn new(config: Config, collector: ProtocolDataCollector) -> Self {
+    pub const fn new(config: Config, collector: ProtocolDataCollector) -> Self {
         Self { config, collector }
     }
 
-    pub fn collector(&self) -> &ProtocolDataCollector {
+    pub const fn collector(&self) -> &ProtocolDataCollector {
         &self.collector
     }
 
@@ -41,14 +41,14 @@ impl FlashLoanStrategy {
         }
 
         let best_protocol = match self.config.strategy.as_str() {
-            "cheapest" => self.find_cheapest_protocol(&viable_protocols),
-            "highest_liquidity" => self.find_highest_liquidity_protocol(&viable_protocols),
+            "cheapest" => Self::find_cheapest_protocol(&viable_protocols),
+            "highest_liquidity" => Self::find_highest_liquidity_protocol(&viable_protocols),
             _ => {
                 debug!(
                     "Unknown strategy '{}', defaulting to cheapest",
                     self.config.strategy
                 );
-                self.find_cheapest_protocol(&viable_protocols)
+                Self::find_cheapest_protocol(&viable_protocols)
             }
         };
 
@@ -59,23 +59,18 @@ impl FlashLoanStrategy {
         Ok(best_protocol)
     }
 
-    fn find_cheapest_protocol(&self, protocols: &[(&Protocol, &ProtocolData)]) -> Protocol {
+    fn find_cheapest_protocol(protocols: &[(&Protocol, &ProtocolData)]) -> Protocol {
         protocols
             .iter()
             .min_by_key(|(_, data)| data.fee_bps)
-            .map(|(protocol, _)| **protocol)
-            .unwrap_or(Protocol::Navi) // Default fallback
+            .map_or(Protocol::Navi, |(protocol, _)| **protocol) // Default fallback
     }
 
-    fn find_highest_liquidity_protocol(
-        &self,
-        protocols: &[(&Protocol, &ProtocolData)],
-    ) -> Protocol {
+    fn find_highest_liquidity_protocol(protocols: &[(&Protocol, &ProtocolData)]) -> Protocol {
         protocols
             .iter()
             .max_by_key(|(_, data)| data.available_liquidity)
-            .map(|(protocol, _)| **protocol)
-            .unwrap_or(Protocol::Navi) // Default fallback
+            .map_or(Protocol::Navi, |(protocol, _)| **protocol) // Default fallback
     }
 
     /// Calculate total cost for a flash loan including fees
@@ -91,8 +86,11 @@ impl FlashLoanStrategy {
             .ok_or_else(|| eyre::eyre!("No data available for protocol {:?}", protocol))?;
 
         // Protocol fee = amount * fee_bps / 10000
-        let protocol_fee = (request.amount as u128 * protocol_data.fee_bps as u128) / 10_000;
-        let total_cost = request.amount + protocol_fee as u64;
+        let protocol_fee =
+            (u128::from(request.amount) * u128::from(protocol_data.fee_bps)) / 10_000;
+        let total_cost = request.amount
+            + u64::try_from(protocol_fee)
+                .map_err(|_| eyre::eyre!("Protocol fee calculation overflow"))?;
 
         debug!(
             "Flash loan cost calculation: amount={}, fee_bps={}, protocol_fee={}, total={}",

@@ -44,12 +44,18 @@ module suiflash::protocols {
         else { abort errors::invalid_protocol() }
     }
 
-    /// Dispatch borrow to adapter with receipt handling for Navi and Scallop
+    /// Dispatch borrow to adapter with receipt handling for all protocols
     public fun borrow_with_receipt<CoinType>(protocol: u64, amount: u64, ctx: &mut TxContext): (Coin<CoinType>, vector<u8>) {
         if (protocol == id_navi()) { 
             let (coin, receipt) = navi_integration::borrow<CoinType>(amount, ctx);
             // Serialize receipt for generic handling (placeholder - use BCS in production)
             let receipt_bytes = navi_receipt_to_bytes(receipt);
+            (coin, receipt_bytes)
+        }
+        else if (protocol == id_bucket()) {
+            let (coin, receipt) = bucket_integration::borrow<CoinType>(amount, ctx);
+            // Serialize Bucket receipt for generic handling
+            let receipt_bytes = bucket_receipt_to_bytes(receipt);
             (coin, receipt_bytes)
         }
         else if (protocol == id_scallop()) {
@@ -74,6 +80,12 @@ module suiflash::protocols {
         if (protocol == id_navi()) { 
             let receipt = navi_receipt_from_bytes<CoinType>(receipt_bytes);
             navi_integration::settle<CoinType>(loan, receipt, repay_coin, ctx)
+        }
+        else if (protocol == id_bucket()) {
+            let receipt = bucket_receipt_from_bytes<CoinType>(receipt_bytes);
+            let returned = bucket_integration::settle<CoinType>(repay_coin, receipt, ctx);
+            coin::destroy_zero(loan);
+            returned
         }
         else if (protocol == id_scallop()) {
             let receipt = scallop_receipt_from_bytes<CoinType>(receipt_bytes);
@@ -111,6 +123,18 @@ module suiflash::protocols {
     fun navi_receipt_from_bytes<CoinType>(_bytes: vector<u8>): navi_integration::NaviFlashLoanReceipt<CoinType> {
         // Placeholder deserialization - in production use BCS
         navi_integration::create_placeholder_receipt<CoinType>(0, 0)
+    }
+
+    /// Serialize Bucket receipt to bytes (placeholder - use BCS serialization in production)
+    fun bucket_receipt_to_bytes<CoinType>(_receipt: bucket_integration::BucketFlashLoanReceipt<CoinType>): vector<u8> {
+        // Placeholder serialization - in production use BCS
+        vector::empty<u8>() // Return empty for now
+    }
+
+    /// Deserialize bytes to Bucket receipt (placeholder)
+    fun bucket_receipt_from_bytes<CoinType>(_bytes: vector<u8>): bucket_integration::BucketFlashLoanReceipt<CoinType> {
+        // Placeholder deserialization - in production use BCS
+        bucket_integration::create_test_receipt<CoinType>(0)
     }
 
     /// Serialize Scallop receipt to bytes (placeholder - use BCS serialization in production)

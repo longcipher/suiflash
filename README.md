@@ -1,5 +1,9 @@
 # SuiFlash
 
+<p align="center">
+  <img src="assets/suiflash_banner.jpeg" alt="SuiFlash Logo" width="600">
+</p>
+
 Capital‑light, multi‑protocol flash loan routing on Sui.
 
 SuiFlash is a production‑grade, capital‑light flash loan aggregator for the Sui blockchain. It unifies access to multiple lending protocols (NAVI, Bucket, Scallop) behind a single, composable interface, performing smart routing, secure user callbacks, atomic settlement, and transparent fee capture in one programmable transaction.

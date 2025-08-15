@@ -25,27 +25,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache Sui build artifacts
+      - name: Cache Sui binary and Move build artifacts
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-            target
+            ~/.sui
+            suiflash-contract/suiflash-router/build
           key: sui-move-${{ runner.os }}-${{ hashFiles('suiflash-contract/suiflash-router/Move.toml') }}
           restore-keys: sui-move-${{ runner.os }}-
 
-      - name: Install Rust (for building Sui CLI)
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Install Sui CLI (build from source)
+      - name: Install Sui CLI via suiup
         run: |
-          cargo install --locked --git https://github.com/MystenLabs/sui sui || true
+          curl -sSfL https://raw.githubusercontent.com/Mystenlabs/suiup/main/install.sh | sh
+          suiup install -y sui@testnet
+          suiup default set sui@testnet
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Move Build
         working-directory: suiflash-contract/suiflash-router

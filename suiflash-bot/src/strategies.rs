@@ -4,22 +4,22 @@ use eyre::Result;
 use tracing::{debug, info};
 
 use crate::{
-    collectors::ProtocolDataCollector,
+    collectors::ProtocolFlashLoanCollector,
     config::{Config, FlashLoanRequest, Protocol, ProtocolData},
 };
 
 #[derive(Debug, Clone)]
 pub struct FlashLoanStrategy {
     config: Config,
-    collector: ProtocolDataCollector,
+    collector: ProtocolFlashLoanCollector,
 }
 
 impl FlashLoanStrategy {
-    pub const fn new(config: Config, collector: ProtocolDataCollector) -> Self {
+    pub const fn new(config: Config, collector: ProtocolFlashLoanCollector) -> Self {
         Self { config, collector }
     }
 
-    pub const fn collector(&self) -> &ProtocolDataCollector {
+    pub const fn collector(&self) -> &ProtocolFlashLoanCollector {
         &self.collector
     }
 

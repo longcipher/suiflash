@@ -2,7 +2,7 @@
 /// These tests verify the full system functionality including protocol routing,
 /// transaction execution simulation, and API endpoints.
 use crate::{
-    collectors::ProtocolDataCollector,
+    collectors::ProtocolFlashLoanCollector,
     config::{Config, FlashLoanRequest, Protocol, RouteMode},
     executors::FlashLoanExecutor,
     strategies::FlashLoanStrategy,
@@ -31,7 +31,7 @@ fn create_integration_test_config() -> Config {
 async fn test_full_protocol_data_pipeline() {
     // Test the complete data collection and processing pipeline
     let config = create_integration_test_config();
-    let collector = ProtocolDataCollector::new(config.clone()).await;
+    let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
 
     // Collect protocol data
     collector
@@ -62,7 +62,7 @@ async fn test_full_protocol_data_pipeline() {
 #[tokio::test]
 async fn test_strategy_selection_logic() {
     let config = create_integration_test_config();
-    let collector = ProtocolDataCollector::new(config.clone()).await;
+    let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
     let strategy = FlashLoanStrategy::new(config, collector.clone());
 
     // Collect initial data
@@ -161,7 +161,7 @@ async fn test_executor_gas_estimation() {
 #[tokio::test]
 async fn test_fee_calculation_accuracy() {
     let config = create_integration_test_config();
-    let collector = ProtocolDataCollector::new(config.clone()).await;
+    let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
     let strategy = FlashLoanStrategy::new(config, collector.clone());
 
     // Collect protocol data
@@ -214,7 +214,7 @@ async fn test_fee_calculation_accuracy() {
 #[tokio::test]
 async fn test_liquidity_constraints() {
     let config = create_integration_test_config();
-    let collector = ProtocolDataCollector::new(config.clone()).await;
+    let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
     let strategy = FlashLoanStrategy::new(config, collector.clone());
 
     // Collect protocol data
@@ -250,7 +250,7 @@ async fn test_liquidity_constraints() {
 #[tokio::test]
 async fn test_transaction_simulation_end_to_end() {
     let config = create_integration_test_config();
-    let collector = ProtocolDataCollector::new(config.clone()).await;
+    let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
     let strategy = FlashLoanStrategy::new(config.clone(), collector.clone());
 
     // Only test if executor can be created (may fail in test environment)
@@ -311,7 +311,7 @@ async fn test_routing_strategies() {
     let mut config = create_integration_test_config();
     config.strategy = "cheapest".to_string();
 
-    let collector = ProtocolDataCollector::new(config.clone()).await;
+    let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
     let strategy = FlashLoanStrategy::new(config, collector.clone());
 
     collector
@@ -338,7 +338,7 @@ async fn test_routing_strategies() {
     let mut config2 = create_integration_test_config();
     config2.strategy = "highest_liquidity".to_string();
 
-    let collector2 = ProtocolDataCollector::new(config2.clone()).await;
+    let collector2 = ProtocolFlashLoanCollector::new(config2.clone()).await;
     let strategy2 = FlashLoanStrategy::new(config2, collector2.clone());
 
     collector2
@@ -359,7 +359,7 @@ async fn test_routing_strategies() {
 #[tokio::test]
 async fn test_error_handling() {
     let config = create_integration_test_config();
-    let collector = ProtocolDataCollector::new(config.clone()).await;
+    let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
     let strategy = FlashLoanStrategy::new(config.clone(), collector.clone());
 
     // Test with zero amount

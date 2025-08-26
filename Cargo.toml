@@ -16,6 +16,7 @@ artemis = { git = "https://github.com/akjong/artemis" }
 async-trait = "0.1"
 axum = "0.8"
 blake3 = "1"
+clap = { version = "4.5", features = ["derive"] }
 config = "0.15"
 dotenv = "0.15"
 eyre = "0.6"

@@ -3,7 +3,7 @@
 #[allow(clippy::module_inception)]
 mod tests {
     use crate::{
-        collectors::ProtocolDataCollector,
+        collectors::ProtocolFlashLoanCollector,
         config::{Asset, Config, FlashLoanRequest, Protocol, RouteMode},
         executors::FlashLoanExecutor,
         strategies::FlashLoanStrategy,
@@ -43,7 +43,7 @@ mod tests {
     #[tokio::test]
     async fn test_protocol_data_collection() {
         let config = create_test_config();
-        let collector = ProtocolDataCollector::new(config).await;
+        let collector = ProtocolFlashLoanCollector::new(config).await;
 
         // Start data collection
         collector.collect_all_data().await.unwrap();
@@ -66,7 +66,7 @@ mod tests {
     #[tokio::test]
     async fn test_strategy_cheapest_routing() {
         let config = create_test_config();
-        let collector = ProtocolDataCollector::new(config.clone()).await;
+        let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
         let strategy = FlashLoanStrategy::new(config, collector.clone());
 
         // Collect data first
@@ -89,7 +89,7 @@ mod tests {
         let mut config = create_test_config();
         config.strategy = "highest_liquidity".to_string();
 
-        let collector = ProtocolDataCollector::new(config.clone()).await;
+        let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
         let strategy = FlashLoanStrategy::new(config, collector.clone());
 
         // Collect data first
@@ -109,7 +109,7 @@ mod tests {
     #[tokio::test]
     async fn test_strategy_explicit_protocol_routing() {
         let config = create_test_config();
-        let collector = ProtocolDataCollector::new(config.clone()).await;
+        let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
         let strategy = FlashLoanStrategy::new(config, collector.clone());
 
         // Collect data first
@@ -129,7 +129,7 @@ mod tests {
     #[tokio::test]
     async fn test_flash_loan_request_validation() {
         let config = create_test_config();
-        let collector = ProtocolDataCollector::new(config.clone()).await;
+        let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
         let strategy = FlashLoanStrategy::new(config, collector.clone());
 
         // Test invalid amount (zero)

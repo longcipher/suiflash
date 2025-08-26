@@ -19,13 +19,23 @@ use axum::{
     response::Json,
     routing::{get, post},
 };
-use collectors::ProtocolDataCollector;
+use clap::Parser;
+use collectors::ProtocolFlashLoanCollector;
 use config::{Config, FlashLoanRequest, FlashLoanResponse, ProtocolsResponse, StatusResponse};
 use executors::FlashLoanExecutor;
 use eyre::Result;
 use strategies::FlashLoanStrategy;
 use tokio::net::TcpListener;
 use tracing::{error, info};
+
+#[derive(Parser, Debug)]
+#[command(name = "suiflash_bot")]
+#[command(about = "SuiFlash Bot - Capital-light multi-protocol flash loan aggregator")]
+struct Args {
+    /// Path to configuration file
+    #[arg(short = 'c', long = "config", help = "Configuration file path")]
+    config: Option<std::path::PathBuf>,
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -36,12 +46,26 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing
-    tracing_subscriber::fmt::init();
+    // Parse command line arguments
+    let args = Args::parse();
 
-    // Load configuration from config.toml or fallback to environment variables
-    let config = Config::load().map_err(|e| eyre::eyre!("Failed to load configuration: {}", e))?;
-    info!("Starting SuiFlash bot with config: {:?}", config);
+    // Initialize tracing
+    tracing_subscriber::fmt().init();
+
+    // Load configuration
+    let config = if let Some(config_path) = args.config {
+        Config::load_from_file(config_path)?
+    } else {
+        Config::load()?
+    };
+    info!("Starting SuiFlash Bot with config: {:?}", config);
+
+    // Check if we should just test the collectors
+    if std::env::var("TEST_COLLECTORS").is_ok() {
+        info!("Running collector test mode");
+        return test_collectors(config).await;
+    }
+
     // Touch individual fields to avoid dead_code warnings until they are fully wired.
     let _touch = (
         &config.sui_rpc_url,
@@ -54,7 +78,7 @@ async fn main() -> Result<()> {
     );
 
     // Initialize components
-    let collector = ProtocolDataCollector::new(config.clone()).await;
+    let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
     let strategy = FlashLoanStrategy::new(config.clone(), collector.clone());
     let executor = FlashLoanExecutor::new(config.clone()).await?;
 
@@ -200,4 +224,28 @@ pub async fn handle_status(
         protocol_count: map.len(),
         last_updated_any,
     }))
+}
+
+/// Test collector functionality
+async fn test_collectors(config: Config) -> Result<()> {
+    println!("\n🔍 Testing Protocol Flash Loan Collectors");
+    println!("==========================================");
+
+    // Initialize collector
+    let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
+
+    // Update all fees - this will fetch and print Navi details
+    println!("\n📊 Updating all protocol fees...\n");
+    collector.update_all_fees().await?;
+
+    // Print summary
+    let all_fees = collector.get_all_flash_loan_fees().await;
+    println!("\n📋 Summary - All Protocol Flash Loan Fees:");
+    println!("============================================");
+    for (protocol, fee_bps) in &all_fees {
+        println!("Protocol: {protocol:?} -> Fee: {fee_bps} bps");
+    }
+
+    println!("\n✅ Collector test completed successfully!");
+    Ok(())
 }

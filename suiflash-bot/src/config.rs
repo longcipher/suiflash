@@ -61,6 +61,55 @@ impl Config {
         config.try_deserialize()
     }
 
+    /// Load configuration from a specific file path
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file doesn't exist or configuration values are invalid
+    pub fn load_from_file<P: AsRef<std::path::Path>>(config_path: P) -> Result<Self, ConfigError> {
+        let config_path = config_path.as_ref();
+
+        // Ensure the config file exists
+        if !config_path.exists() {
+            return Err(ConfigError::NotFound(format!(
+                "Configuration file not found: {}",
+                config_path.display()
+            )));
+        }
+
+        let mut builder = ConfigBuilder::builder()
+            // Set default values first
+            .set_default("sui_rpc_url", "https://fullnode.testnet.sui.io:443")?
+            .set_default("server_port", 3000)?
+            .set_default("refresh_interval_ms", 10000)?
+            .set_default("strategy", "cheapest")?
+            .set_default("contract_package_id", "0x1")?
+            .set_default("navi_package_id", "0x2")?
+            .set_default("bucket_package_id", "0x3")?
+            .set_default("scallop_package_id", "0x4")?
+            .set_default("service_fee_bps", 40)?;
+
+        // Load from the specified config file
+        let config_file_str = config_path.to_string_lossy();
+        let config_file_without_ext = config_file_str
+            .strip_suffix(".toml")
+            .unwrap_or(&config_file_str);
+        builder = builder.add_source(File::with_name(config_file_without_ext));
+
+        // Add environment variables with SUIFLASH_ prefix
+        builder = builder.add_source(
+            Environment::with_prefix("SUIFLASH")
+                .separator("_")
+                .ignore_empty(true),
+        );
+
+        // Also support legacy environment variables without prefix for backward compatibility
+        builder = builder.add_source(Environment::default().ignore_empty(true));
+
+        let config = builder.build()?;
+        config.try_deserialize()
+    }
+
     /// Legacy method for backward compatibility with environment variables
     ///
     /// # Errors

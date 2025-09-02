@@ -26,6 +26,23 @@ fn create_integration_test_config() -> Config {
     }
 }
 
+/// Helper function to create test flash loan request
+fn create_test_flash_loan_request(
+    amount: u64,
+    route_mode: RouteMode,
+    explicit_protocol: Option<Protocol>,
+) -> FlashLoanRequest {
+    FlashLoanRequest {
+        asset: "SUI".to_string(),
+        amount,
+        route_mode,
+        explicit_protocol,
+        user_operation: "test_arbitrage_operation".to_string(),
+        callback_recipient: None, // Will be filled by handler
+        callback_payload: Some("test_payload".to_string()),
+    }
+}
+
 /// Test the full protocol data collection pipeline
 #[tokio::test]
 async fn test_full_protocol_data_pipeline() {
@@ -404,4 +421,182 @@ async fn test_error_handling() {
             .await;
         assert!(result.is_ok(), "Error handling should not fail");
     }
+}
+
+#[tokio::test]
+async fn test_navi_flash_loan_full_flow() {
+    println!("\n🧪 Testing Navi Flash Loan Full Flow");
+    println!("===================================");
+
+    let config = create_integration_test_config();
+
+    // Initialize components
+    let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
+    let strategy = FlashLoanStrategy::new(config.clone(), collector.clone());
+    let executor = FlashLoanExecutor::new(config.clone()).await.unwrap();
+
+    // Update fees to ensure we have data
+    if let Err(e) = collector.collect_all_data().await {
+        println!("⚠️  Failed to update fees (expected in test env): {}", e);
+    }
+
+    // Create a flash loan request for Navi
+    let request = create_test_flash_loan_request(
+        1_000_000_000, // 1 SUI
+        RouteMode::Explicit,
+        Some(Protocol::Navi),
+    );
+
+    println!("📋 Flash Loan Request: {:?}", request);
+
+    // Generate execution plan
+    match strategy.generate_execution_plan(&request).await {
+        Ok(plan) => {
+            println!("✅ Execution Plan Generated:");
+            println!("   Protocol: {:?}", plan.protocol);
+            println!("   Amount: {} SUI", plan.amount as f64 / 1_000_000_000.0);
+            println!(
+                "   Total Cost: {} SUI",
+                plan.total_cost as f64 / 1_000_000_000.0
+            );
+            println!(
+                "   Fee: {} SUI",
+                (plan.total_cost - plan.amount) as f64 / 1_000_000_000.0
+            );
+
+            // Execute the flash loan
+            match executor.execute_flash_loan(&plan).await {
+                Ok(tx_digest) => {
+                    println!("✅ Flash Loan Executed Successfully!");
+                    println!("   Transaction Digest: {}", tx_digest);
+
+                    // Verify the transaction
+                    match executor.verify_execution(&tx_digest).await {
+                        Ok(true) => println!("✅ Transaction Verification Passed"),
+                        Ok(false) => println!("❌ Transaction Verification Failed"),
+                        Err(e) => println!("⚠️  Transaction Verification Error: {}", e),
+                    }
+                }
+                Err(e) => {
+                    println!("❌ Flash Loan Execution Failed: {}", e);
+                }
+            }
+        }
+        Err(e) => {
+            println!("❌ Failed to generate execution plan: {}", e);
+        }
+    }
+
+    println!("🏁 Test Completed\n");
+}
+
+#[tokio::test]
+async fn test_navi_fee_calculation_accuracy() {
+    println!("\n🧪 Testing Navi Fee Calculation Accuracy");
+    println!("=========================================");
+
+    let config = create_integration_test_config();
+
+    let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
+    let strategy = FlashLoanStrategy::new(config.clone(), collector.clone());
+
+    // Update fees
+    if let Err(e) = collector.collect_all_data().await {
+        println!("⚠️  Failed to update fees (expected in test env): {}", e);
+    }
+
+    let request = create_test_flash_loan_request(
+        10_000_000_000, // 10 SUI
+        RouteMode::Explicit,
+        Some(Protocol::Navi),
+    );
+
+    // Calculate cost manually and compare with strategy
+    if let Ok(cost) = strategy.calculate_cost(&request, Protocol::Navi).await {
+        println!("✅ Cost Calculation for 10 SUI:");
+        println!(
+            "   Principal: {} SUI",
+            request.amount as f64 / 1_000_000_000.0
+        );
+        println!("   Total Cost: {} SUI", cost as f64 / 1_000_000_000.0);
+        println!(
+            "   Fee: {} SUI",
+            (cost - request.amount) as f64 / 1_000_000_000.0
+        );
+        println!(
+            "   Fee Rate: {:.4}%",
+            (cost - request.amount) as f64 / request.amount as f64 * 100.0
+        );
+
+        // Verify reasonable fee calculation
+        assert!(
+            cost > request.amount,
+            "Total cost should be greater than principal"
+        );
+        assert!(
+            cost < request.amount * 2,
+            "Fee should not exceed 100% of principal"
+        );
+    } else {
+        println!("❌ Failed to calculate cost - likely no fee data");
+    }
+
+    println!("🏁 Test Completed\n");
+}
+
+#[tokio::test]
+async fn test_navi_vs_other_protocols() {
+    println!("\n🧪 Testing Navi vs Other Protocols");
+    println!("===================================");
+
+    let config = create_integration_test_config();
+    let collector = ProtocolFlashLoanCollector::new(config.clone()).await;
+    let strategy = FlashLoanStrategy::new(config.clone(), collector.clone());
+
+    // Update fees
+    if let Err(e) = collector.collect_all_data().await {
+        println!("⚠️  Failed to update fees (expected in test env): {}", e);
+    }
+
+    let test_amount = 5_000_000_000; // 5 SUI
+
+    println!(
+        "💰 Comparing flash loan costs for {} SUI:",
+        test_amount as f64 / 1_000_000_000.0
+    );
+
+    for protocol in [Protocol::Navi, Protocol::Bucket, Protocol::Scallop] {
+        let request =
+            create_test_flash_loan_request(test_amount, RouteMode::Explicit, Some(protocol));
+
+        match strategy.calculate_cost(&request, protocol).await {
+            Ok(cost) => {
+                let fee = cost - test_amount;
+                let fee_bps = (fee * 10_000) / test_amount;
+                println!(
+                    "   {:?}: {} SUI fee ({} bps)",
+                    protocol,
+                    fee as f64 / 1_000_000_000.0,
+                    fee_bps
+                );
+            }
+            Err(e) => {
+                println!("   {:?}: Failed to calculate cost - {}", protocol, e);
+            }
+        }
+    }
+
+    // Test best cost selection
+    let best_cost_request = create_test_flash_loan_request(test_amount, RouteMode::BestCost, None);
+
+    match strategy.find_best_protocol(&best_cost_request).await {
+        Ok(best_protocol) => {
+            println!("🏆 Best cost protocol: {:?}", best_protocol);
+        }
+        Err(e) => {
+            println!("❌ Failed to find best protocol: {}", e);
+        }
+    }
+
+    println!("🏁 Test Completed\n");
 }

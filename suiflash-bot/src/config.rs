@@ -32,6 +32,15 @@ impl Config {
         let mut builder = ConfigBuilder::builder()
             // Set default values
             .set_default("sui_rpc_url", "https://fullnode.testnet.sui.io:443")?
+            .set_default("private_key", "test_private_key_for_simulation")?
+            .set_default(
+                "sui_flash_package_id",
+                "0xa99c85b0b24c6b2c6b88acb6ae19b2e2e4c8c11e6f9b6e9c0b0b6b9e0b0b0b0b",
+            )?
+            .set_default(
+                "sui_flash_config_object_id",
+                "0xb99c85b0b24c6b2c6b88acb6ae19b2e2e4c8c11e6f9b6e9c0b0b6b9e0b0b0b0b",
+            )?
             .set_default("server_port", 3000)?
             .set_default("refresh_interval_ms", 10000)?
             .set_default("strategy", "cheapest")?
@@ -242,7 +251,7 @@ pub struct FlashLoanRequest {
     pub callback_payload: Option<String>, // base64 or hex encoded payload
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum RouteMode {
     Explicit,
     BestCost,

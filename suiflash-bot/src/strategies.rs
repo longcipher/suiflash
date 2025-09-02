@@ -5,11 +5,12 @@ use tracing::{debug, info};
 
 use crate::{
     collectors::ProtocolFlashLoanCollector,
-    config::{Config, FlashLoanRequest, Protocol, ProtocolData},
+    config::{Config, FlashLoanRequest, Protocol, ProtocolData, RouteMode},
 };
 
 #[derive(Debug, Clone)]
 pub struct FlashLoanStrategy {
+    #[allow(dead_code)]
     config: Config,
     collector: ProtocolFlashLoanCollector,
 }
@@ -25,6 +26,18 @@ impl FlashLoanStrategy {
 
     /// Find the best protocol for a flash loan request based on strategy
     pub async fn find_best_protocol(&self, request: &FlashLoanRequest) -> Result<Protocol> {
+        // Handle explicit protocol selection
+        if request.route_mode == RouteMode::Explicit {
+            if let Some(protocol) = request.explicit_protocol {
+                debug!("Using explicit protocol: {:?}", protocol);
+                return Ok(protocol);
+            } else {
+                return Err(eyre::eyre!(
+                    "Explicit route mode requires explicit_protocol"
+                ));
+            }
+        }
+
         let protocol_data = self.collector.get_all_protocol_data().await;
 
         // Filter protocols that have sufficient liquidity
@@ -40,21 +53,15 @@ impl FlashLoanStrategy {
             );
         }
 
-        let best_protocol = match self.config.strategy.as_str() {
-            "cheapest" => Self::find_cheapest_protocol(&viable_protocols),
-            "highest_liquidity" => Self::find_highest_liquidity_protocol(&viable_protocols),
-            _ => {
-                debug!(
-                    "Unknown strategy '{}', defaulting to cheapest",
-                    self.config.strategy
-                );
-                Self::find_cheapest_protocol(&viable_protocols)
-            }
+        let best_protocol = match request.route_mode {
+            RouteMode::BestCost => Self::find_cheapest_protocol(&viable_protocols),
+            RouteMode::BestLiquidity => Self::find_highest_liquidity_protocol(&viable_protocols),
+            RouteMode::Explicit => unreachable!(), // Handled above
         };
 
         info!(
-            "Selected protocol {:?} for flash loan of {} SUI",
-            best_protocol, request.amount
+            "Selected protocol {:?} for flash loan of {} (route_mode: {:?})",
+            best_protocol, request.amount, request.route_mode
         );
         Ok(best_protocol)
     }
@@ -85,16 +92,24 @@ impl FlashLoanStrategy {
             .await
             .ok_or_else(|| eyre::eyre!("No data available for protocol {:?}", protocol))?;
 
-        // Protocol fee = amount * fee_bps / 10000
-        let protocol_fee =
+        // Protocol fee = amount * fee_bps / 10000, with minimum fee of 1 if non-zero bps
+        let protocol_fee_raw =
             (u128::from(request.amount) * u128::from(protocol_data.fee_bps)) / 10_000;
+
+        // Ensure minimum fee of 1 unit if fee_bps > 0 to avoid zero fees for small amounts
+        let protocol_fee = if protocol_data.fee_bps > 0 && protocol_fee_raw == 0 {
+            1u128
+        } else {
+            protocol_fee_raw
+        };
+
         let total_cost = request.amount
             + u64::try_from(protocol_fee)
                 .map_err(|_| eyre::eyre!("Protocol fee calculation overflow"))?;
 
         debug!(
-            "Flash loan cost calculation: amount={}, fee_bps={}, protocol_fee={}, total={}",
-            request.amount, protocol_data.fee_bps, protocol_fee, total_cost
+            "Flash loan cost calculation: amount={}, fee_bps={}, protocol_fee_raw={}, protocol_fee={}, total={}",
+            request.amount, protocol_data.fee_bps, protocol_fee_raw, protocol_fee, total_cost
         );
 
         Ok(total_cost)

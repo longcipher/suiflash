@@ -109,8 +109,22 @@ async fn main() -> Result<()> {
     let addr = format!("0.0.0.0:{}", config.server_port);
     info!("Starting server on {}", addr);
 
-    let listener = TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+    let listener = match TcpListener::bind(&addr).await {
+        Ok(listener) => {
+            info!("Successfully bound to {}", addr);
+            listener
+        }
+        Err(e) => {
+            error!("Failed to bind to {}: {}", addr, e);
+            return Err(e.into());
+        }
+    };
+
+    info!("Server listening and ready to accept connections");
+    if let Err(e) = axum::serve(listener, app).await {
+        error!("Server error: {}", e);
+        return Err(e.into());
+    }
 
     // Clean up background tasks
     collector_handle.abort();
@@ -129,14 +143,29 @@ async fn main() -> Result<()> {
 /// - Service fee calculation overflows
 pub async fn handle_flash_loan(
     State(state): State<AppState>,
-    Json(request): Json<FlashLoanRequest>,
+    Json(mut request): Json<FlashLoanRequest>,
 ) -> Result<Json<FlashLoanResponse>, StatusCode> {
     info!("Received flash loan request: {:?}", request);
     info!("Current strategy mode: {}", state.config.strategy);
 
+    // Provide default callback recipient if not specified
+    if request.callback_recipient.is_none() {
+        request.callback_recipient = Some(state.executor.create_dummy_callback_recipient());
+        info!(
+            "Using default callback recipient: {:?}",
+            request.callback_recipient
+        );
+    }
+
+    // Provide default user operation if empty
+    if request.user_operation.is_empty() {
+        request.user_operation = "default_noop_operation".to_string();
+        info!("Using default user operation: {}", request.user_operation);
+    }
+
     // Determine protocol if explicit routing requested
-    let execution_plan = if let Some(p) = &request.explicit_protocol {
-        match state.strategy.override_protocol(&request, *p).await {
+    let execution_plan = if let Some(p) = request.explicit_protocol {
+        match state.strategy.override_protocol(&request, p).await {
             Ok(plan) => plan,
             Err(e) => {
                 error!("Explicit protocol override failed: {}", e);
@@ -152,11 +181,6 @@ pub async fn handle_flash_loan(
             }
         }
     };
-    // Use user_operation to avoid dead code warnings and for observability.
-    info!(
-        "User operation length: {}",
-        execution_plan.user_operation.len()
-    );
 
     // Execute the flash loan
     let tx_digest = match state.executor.execute_flash_loan(&execution_plan).await {

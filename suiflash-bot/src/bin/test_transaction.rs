@@ -1,5 +1,6 @@
 use eyre::Result;
 use sui_sdk::{SuiClientBuilder, types::base_types::ObjectID};
+use sui_json_rpc_types::SuiObjectDataOptions;
 use std::str::FromStr;
 
 #[tokio::main]
@@ -18,7 +19,7 @@ async fn main() -> Result<()> {
     let package_object = sui_client.read_api()
         .get_object_with_options(
             package_id,
-            sui_sdk::types::object::SuiObjectDataOptions::new().with_type()
+            SuiObjectDataOptions::new().with_type()
         )
         .await?;
         
@@ -34,7 +35,7 @@ async fn main() -> Result<()> {
     let config_object = sui_client.read_api()
         .get_object_with_options(
             config_id,
-            sui_sdk::types::object::SuiObjectDataOptions::new().with_content()
+            SuiObjectDataOptions::new().with_content()
         )
         .await?;
         

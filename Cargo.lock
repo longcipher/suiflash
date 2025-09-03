@@ -7349,6 +7349,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "sui-json-rpc-types",
  "sui-sdk",
  "sui-types",
  "tokio",

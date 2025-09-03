@@ -162,7 +162,18 @@ module suiflash::new_protocol_integration {
 }
 ```
 
-## Configuration
+## Deployment Information
+
+### Current Deployment (Sui Devnet)
+
+| Component | Address | Description |
+|-----------|---------|-------------|
+| Package ID | `0x0ea1cc59ece4c8c6ff7342dd89f192873303980efda1cb6d0e55beb93d13f7e3` | Main contract package |
+| Config Object | `0x27695e4c7aa292b3f1bc712daf3a4a0d5548f7ca159010428b4bf92182d0552b` | Shared config object |
+| AdminCap | `0x2753f1cd8010a4c1bbbe8050951f906af0886c2ce58b6a7473f4bd089365f193` | Admin capability object |
+| Treasury | `0xa11cea3bbf6889be9d49991757cb0b676d644e24acec54225d64c97a1d81acc1` | Fee recipient address |
+| Service Fee | 40 bps | 0.40% service fee |
+| Network | Sui Devnet | <https://fullnode.devnet.sui.io:443> |
 
 ### Protocol Fees
 

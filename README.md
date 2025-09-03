@@ -8,6 +8,15 @@ Capital‑light, multi‑protocol flash loan routing on Sui.
 
 SuiFlash is a production‑grade, capital‑light flash loan aggregator for the Sui blockchain. It unifies access to multiple lending protocols (NAVI, Bucket, Scallop) behind a single, composable interface, performing smart routing, secure user callbacks, atomic settlement, and transparent fee capture in one programmable transaction.
 
+## 📡 Current Deployment (Sui Devnet)
+
+| Component | Address | Description |
+|-----------|---------|-------------|
+| Package ID | `0x0ea1cc59ece4c8c6ff7342dd89f192873303980efda1cb6d0e55beb93d13f7e3` | Main contract package |
+| Config Object | `0x27695e4c7aa292b3f1bc712daf3a4a0d5548f7ca159010428b4bf92182d0552b` | Shared config object |
+| Network | Sui Devnet | <https://fullnode.devnet.sui.io:443> |
+| Service Fee | 40 bps | 0.40% service fee |
+
 ## ✨ Key Features
 
 - Unified API & Move entrypoint: one `flash_loan` call instead of three integrations.

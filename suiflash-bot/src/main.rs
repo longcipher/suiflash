@@ -97,8 +97,14 @@ async fn main() -> Result<()> {
         executor,
     };
 
-    // Build the router
+    // Build the router with debug logging
     let app = Router::new()
+        .route("/", get(|| async {
+            println!("DEBUG: Root endpoint called - printing to stdout");
+            eprintln!("DEBUG: Root endpoint called - printing to stderr");
+            info!("Root endpoint called");
+            "SuiFlash Bot API"
+        }))
         .route("/flashloan", post(handle_flash_loan))
         .route("/protocols", get(handle_protocols))
         .route("/status", get(handle_status))
@@ -106,7 +112,7 @@ async fn main() -> Result<()> {
         .with_state(app_state);
 
     // Start the server
-    let addr = format!("0.0.0.0:{}", config.server_port);
+    let addr = format!("127.0.0.1:{}", config.server_port);  // Try localhost instead of 0.0.0.0
     info!("Starting server on {}", addr);
 
     let listener = match TcpListener::bind(&addr).await {
@@ -215,6 +221,9 @@ pub async fn handle_flash_loan(
 }
 
 pub async fn handle_health() -> &'static str {
+    println!("DEBUG: Health endpoint called - printing to stdout");
+    eprintln!("DEBUG: Health endpoint called - printing to stderr");
+    info!("Health endpoint called");
     "OK"
 }
 
@@ -240,6 +249,7 @@ pub async fn handle_protocols(
 pub async fn handle_status(
     State(state): State<AppState>,
 ) -> Result<Json<StatusResponse>, StatusCode> {
+    info!("Status endpoint called");
     let map = state.strategy.collector().get_all_protocol_data().await;
     let last_updated_any = map.values().map(|d| d.last_updated).max();
     Ok(Json(StatusResponse {

@@ -23,6 +23,20 @@ module suiflash::state {
         (AdminCap { id: object::new(ctx) }, Config { id: object::new(ctx), treasury, service_fee_bps, paused: false, allowed_assets: vector::empty(), protocol_configs: vector::empty() })
     }
 
+    /// Share the config object
+    entry fun share_config(config: Config) {
+        use sui::transfer;
+        transfer::share_object(config);
+    }
+
+    /// Create and transfer AdminCap, then share Config (entry function version)
+    entry fun create_and_share(treasury: address, service_fee_bps: u64, ctx: &mut TxContext) {
+        use sui::transfer;
+        let (admin_cap, config) = create(treasury, service_fee_bps, ctx);
+        transfer::public_transfer(admin_cap, treasury);
+        transfer::share_object(config);
+    }
+
     public fun assert_not_paused(cfg: &Config) { assert!(!cfg.paused, errors::paused()); }
 
     public fun set_paused(cap: &AdminCap, cfg: &mut Config, value: bool) { cfg.paused = value; let _ = cap; }

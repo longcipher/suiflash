@@ -31,15 +31,15 @@ impl Config {
     pub fn load() -> Result<Self, ConfigError> {
         let mut builder = ConfigBuilder::builder()
             // Set default values
-            .set_default("sui_rpc_url", "https://fullnode.testnet.sui.io:443")?
-            .set_default("private_key", "test_private_key_for_simulation")?
+            .set_default("sui_rpc_url", "https://fullnode.devnet.sui.io:443")?
+            .set_default("private_key", "")?
             .set_default(
                 "sui_flash_package_id",
-                "0xa99c85b0b24c6b2c6b88acb6ae19b2e2e4c8c11e6f9b6e9c0b0b6b9e0b0b0b0b",
+                "0x0ea1cc59ece4c8c6ff7342dd89f192873303980efda1cb6d0e55beb93d13f7e3",
             )?
             .set_default(
                 "sui_flash_config_object_id",
-                "0xb99c85b0b24c6b2c6b88acb6ae19b2e2e4c8c11e6f9b6e9c0b0b6b9e0b0b0b0b",
+                "0x27695e4c7aa292b3f1bc712daf3a4a0d5548f7ca159010428b4bf92182d0552b",
             )?
             .set_default("server_port", 3000)?
             .set_default("refresh_interval_ms", 10000)?
@@ -88,7 +88,7 @@ impl Config {
 
         let mut builder = ConfigBuilder::builder()
             // Set default values first
-            .set_default("sui_rpc_url", "https://fullnode.testnet.sui.io:443")?
+            .set_default("sui_rpc_url", "https://fullnode.devnet.sui.io:443")?
             .set_default("server_port", 3000)?
             .set_default("refresh_interval_ms", 10000)?
             .set_default("strategy", "cheapest")?

@@ -25,9 +25,8 @@ impl FlashLoanExecutor {
             .build(&config.sui_rpc_url)
             .await?;
 
-        // Parse the private key and derive the signer address
-        // For now, use a test address - in production, derive from private key
-        let signer_address = SuiAddress::random_for_testing_only();
+    // Derive signer (placeholder: random because full signing not yet implemented with current SDK surface here)
+    let (signer_address, _kp_opt) = parse_sui_private_key(&config.private_key).unwrap_or((SuiAddress::random_for_testing_only(), None));
 
         info!(
             "Initialized FlashLoanExecutor with signer: {}",
@@ -162,9 +161,9 @@ impl FlashLoanExecutor {
             _gas_budget as f64 / 1_000_000_000.0
         );
 
-        // Create a realistic transaction content for hashing
+        // Simulate deterministic digest (real network submission to be integrated later)
         let tx_content = format!(
-            "real_ptb:{}:main::flash_loan_coin<SUI>:cfg={},proto={},amt={},recv={},payload={}",
+            "simulated_ptb:{}:main::flash_loan_coin<SUI>:cfg={},proto={},amt={},recv={},payload={}",
             structure.flash_package_id,
             structure.config_object_id,
             structure.protocol_id,
@@ -172,11 +171,9 @@ impl FlashLoanExecutor {
             structure.callback_recipient,
             structure.user_operation
         );
-
         let hash = blake3::hash(tx_content.as_bytes());
         let tx_digest = format!("0x{}", hex::encode(&hash.as_bytes()[0..32]));
-
-        info!("Real PTB constructed - Transaction digest: {}", tx_digest);
+        info!("PTB constructed (simulated) - Transaction digest: {}", tx_digest);
 
         // Log the actual Move call being executed
         info!("Executing Move call:");
@@ -538,6 +535,27 @@ impl FlashLoanExecutor {
             info!("Callback Payload: {}", payload);
         }
         info!("=====================================");
+    }
+}
+
+/// Try to parse key (currently only returns address if bech32 Ed25519) - returns (address, optional raw bytes)
+fn parse_sui_private_key(pk: &str) -> eyre::Result<(SuiAddress, Option<Vec<u8>>)> {
+    let trimmed = pk.trim();
+    if trimmed.starts_with("suiprivkey") {
+        let (_hrp, data, _variant) = bech32::decode(trimmed)?;
+        let bytes: Vec<u8> = data.into_iter().map(|v| v.to_u8()).collect();
+        if bytes.len() < 1 + 32 { return Err(eyre::eyre!("Invalid bech32 key length")); }
+        if bytes[0] != 0 { return Err(eyre::eyre!("Only Ed25519 flag 0 supported")); }
+        let sk = &bytes[1..33];
+        // Derive pseudo address by hashing public key placeholder (for now random)
+        let addr = SuiAddress::random_for_testing_only();
+        Ok((addr, Some(sk.to_vec())))
+    } else if trimmed.starts_with("0x") {
+        let hex_part = &trimmed[2..];
+        let raw = hex::decode(hex_part)?;
+        if raw.len() == 32 { Ok((SuiAddress::random_for_testing_only(), Some(raw))) } else { Err(eyre::eyre!("Unsupported hex key length")) }
+    } else {
+        Err(eyre::eyre!("Unsupported private key format"))
     }
 }
 

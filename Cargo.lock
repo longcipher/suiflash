@@ -7339,6 +7339,7 @@ dependencies = [
  "artemis",
  "async-trait",
  "axum",
+ "bech32",
  "blake3",
  "clap",
  "config",

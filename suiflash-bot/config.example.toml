@@ -2,12 +2,12 @@
 # Copy this file to config.toml and update with your actual values
 
 # Sui Network Configuration
-sui_rpc_url = "https://fullnode.mainnet.sui.io"  # Can also use SUIFLASH_SUI_RPC_URL
+sui_rpc_url = "https://fullnode.devnet.sui.io:443"  # Can also use SUIFLASH_SUI_RPC_URL
 private_key = "YOUR_PRIVATE_KEY_HERE"                # Can also use SUIFLASH_PRIVATE_KEY
 
-# SuiFlash Contract Configuration
-sui_flash_package_id = "0x1234567890abcdef1234567890abcdef12345678"       # Can also use SUIFLASH_SUI_FLASH_PACKAGE_ID
-sui_flash_config_object_id = "0xabcdef1234567890abcdef1234567890abcdef12" # Can also use SUIFLASH_SUI_FLASH_CONFIG_OBJECT_ID
+# SuiFlash Contract Configuration - Current Devnet Deployment
+sui_flash_package_id = "0x0ea1cc59ece4c8c6ff7342dd89f192873303980efda1cb6d0e55beb93d13f7e3"       # Can also use SUIFLASH_SUI_FLASH_PACKAGE_ID
+sui_flash_config_object_id = "0x27695e4c7aa292b3f1bc712daf3a4a0d5548f7ca159010428b4bf92182d0552b" # Can also use SUIFLASH_SUI_FLASH_CONFIG_OBJECT_ID
 
 # Server Configuration
 server_port = 3000          # Can also use SUIFLASH_SERVER_PORT

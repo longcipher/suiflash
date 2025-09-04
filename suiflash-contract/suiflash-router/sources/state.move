@@ -24,12 +24,14 @@ module suiflash::state {
     }
 
     /// Share the config object
+    #[allow(lint(custom_state_change), lint(share_owned))]
     entry fun share_config(config: Config) {
         use sui::transfer;
         transfer::share_object(config);
     }
 
     /// Create and transfer AdminCap, then share Config (entry function version)
+    #[allow(lint(custom_state_change), lint(share_owned))]
     entry fun create_and_share(treasury: address, service_fee_bps: u64, ctx: &mut TxContext) {
         use sui::transfer;
         let (admin_cap, config) = create(treasury, service_fee_bps, ctx);

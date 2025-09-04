@@ -114,36 +114,42 @@ module suiflash::protocols {
     }
 
     /// Serialize Navi receipt to bytes (placeholder - use BCS serialization in production)
+    #[allow(unused_type_parameter)]
     fun navi_receipt_to_bytes<CoinType>(_receipt: navi_integration::NaviFlashLoanReceipt<CoinType>): vector<u8> {
         // Placeholder serialization - in production use BCS
         vector::empty<u8>() // Return empty for now
     }
 
     /// Deserialize bytes to Navi receipt (placeholder)
+    #[allow(unused_type_parameter)]
     fun navi_receipt_from_bytes<CoinType>(_bytes: vector<u8>): navi_integration::NaviFlashLoanReceipt<CoinType> {
         // Placeholder deserialization - in production use BCS
         navi_integration::create_placeholder_receipt<CoinType>(0, 0)
     }
 
     /// Serialize Bucket receipt to bytes (placeholder - use BCS serialization in production)
+    #[allow(unused_type_parameter)]
     fun bucket_receipt_to_bytes<CoinType>(_receipt: bucket_integration::BucketFlashLoanReceipt<CoinType>): vector<u8> {
         // Placeholder serialization - in production use BCS
         vector::empty<u8>() // Return empty for now
     }
 
     /// Deserialize bytes to Bucket receipt (placeholder)
+    #[allow(unused_type_parameter)]
     fun bucket_receipt_from_bytes<CoinType>(_bytes: vector<u8>): bucket_integration::BucketFlashLoanReceipt<CoinType> {
         // Placeholder deserialization - in production use BCS
         bucket_integration::create_test_receipt<CoinType>(0)
     }
 
     /// Serialize Scallop receipt to bytes (placeholder - use BCS serialization in production)
+    #[allow(unused_type_parameter)]
     fun scallop_receipt_to_bytes<CoinType>(_receipt: scallop_integration::ScallopFlashLoanReceipt<CoinType>): vector<u8> {
         // Placeholder serialization - in production use BCS
         vector::empty<u8>() // Return empty for now
     }
 
     /// Deserialize bytes to Scallop receipt (placeholder)
+    #[allow(unused_type_parameter)]
     fun scallop_receipt_from_bytes<CoinType>(_bytes: vector<u8>): scallop_integration::ScallopFlashLoanReceipt<CoinType> {
         // Placeholder deserialization - in production use BCS
         use sui::object;

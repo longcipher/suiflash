@@ -542,8 +542,8 @@ impl FlashLoanExecutor {
 fn parse_sui_private_key(pk: &str) -> eyre::Result<(SuiAddress, Option<Vec<u8>>)> {
     let trimmed = pk.trim();
     if trimmed.starts_with("suiprivkey") {
-        let (_hrp, data, _variant) = bech32::decode(trimmed)?;
-        let bytes: Vec<u8> = data.into_iter().map(|v| v.to_u8()).collect();
+        let (_hrp, data) = bech32::decode(trimmed)?;
+        let bytes: Vec<u8> = data;
         if bytes.len() < 1 + 32 { return Err(eyre::eyre!("Invalid bech32 key length")); }
         if bytes[0] != 0 { return Err(eyre::eyre!("Only Ed25519 flag 0 supported")); }
         let sk = &bytes[1..33];

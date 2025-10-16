@@ -3,8 +3,11 @@ name = "suiflash_router"
 version = "0.1.0"
 edition = "2024"
 
-# Dependencies are automatically managed by Sui framework
-# Removed explicit Sui dependency to resolve warning
+[dependencies]
+# Sui framework automatically added by build system
+
+# FUTURE: Add Navi Protocol dependency for real integration
+# Navi = { git = "https://github.com/naviprotocol/protocol-interface.git", subdir = "lending_core", rev = "main" }
 
 [addresses]
-suiflash =  "0x0" # to be replaced at publish time (renamed from `router`)
+suiflash = "0x0" # to be replaced at publish time (renamed from `router`)

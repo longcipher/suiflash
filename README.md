@@ -245,6 +245,13 @@ suiflash/
 
 ## Navi Protocol
 
+> **⚠️ Integration Status**: The Navi Protocol integration is currently in **MOCK/PLACEHOLDER** state.
+> - ✅ **Working**: Fee configuration (6 bps), address setup, API integration, architecture
+> - ❌ **Not Implemented**: Actual on-chain calls to Navi's `flash_loan_with_ctx` and `flash_repay_with_ctx`
+> - 📊 **Completion**: ~30% (configuration and structure only)
+> 
+> See `docs/NAVI_INTEGRATION_REVIEW.md` for complete status and required work for production.
+
 ### Navi Protocol Docs
 
 - <https://naviprotocol.gitbook.io/navi-protocol-docs/developers-docs/hackathon-overflow-navi-bounty>
@@ -257,6 +264,13 @@ suiflash/
 ### Navi Protocol SDKs
 
 - <https://github.com/naviprotocol/navi-sdk/blob/main/src/libs/PTB/commonFunctions.ts>
+
+### SuiFlash Navi Integration Docs
+
+- `docs/NAVI_ADDRESSES.md` - Mainnet addresses and API reference
+- `docs/NAVI_INTEGRATION.md` - Integration guide (intended architecture)
+- `docs/NAVI_INTEGRATION_REVIEW.md` - Current status and complete review
+- `suiflash-contract/suiflash-router/sources/integrations/navi_real_example.move` - Reference implementation
 
 ## Scallop Protocol
 

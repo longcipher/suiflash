@@ -68,7 +68,17 @@ impl FlashLoanExecutor {
     async fn execute_navi_flash_loan(&self, plan: &ExecutionPlan) -> Result<String> {
         debug!("Building Navi flash loan transaction");
 
-        // Build the programmable transaction block for Navi
+        // Use the new Navi PTB builder module
+        info!("Building Navi Protocol-specific PTB using navi_ptb_builder");
+        
+        // TODO: Uncomment when ready to use real Navi PTB construction
+        // let ptb = crate::navi_ptb_builder::build_navi_flash_loan_ptb(
+        //     &self.client,
+        //     &self.config,
+        //     plan,
+        // ).await?;
+        
+        // For now, use legacy structure-based approach
         let ptb_structure = self.build_navi_transaction_structure(plan).await?;
         info!("Navi PTB structure: {:?}", ptb_structure);
 

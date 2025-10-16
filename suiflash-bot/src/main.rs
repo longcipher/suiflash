@@ -2,6 +2,7 @@ mod collectors;
 mod config;
 mod executors;
 mod strategies;
+mod navi_ptb_builder;
 
 #[cfg(test)]
 mod tests;

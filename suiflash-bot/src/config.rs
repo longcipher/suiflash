@@ -13,7 +13,14 @@ pub struct Config {
     pub refresh_interval_ms: u64,
     pub strategy: String, // "cheapest" or "highest_liquidity"
     pub contract_package_id: String,
+    // Navi Protocol addresses (mainnet)
     pub navi_package_id: String,
+    pub navi_storage_id: String,
+    pub navi_flashloan_config_id: String,
+    pub navi_incentive_v2_id: String,
+    pub navi_incentive_v3_id: String,
+    pub navi_price_oracle_id: String,
+    // Other protocols
     pub bucket_package_id: String,
     pub scallop_package_id: String,
     pub service_fee_bps: u64, // off-chain expectation (mirror of on-chain Config)
@@ -45,7 +52,13 @@ impl Config {
             .set_default("refresh_interval_ms", 10000)?
             .set_default("strategy", "cheapest")?
             .set_default("contract_package_id", "0x1")?
-            .set_default("navi_package_id", "0x2")?
+            // Navi Protocol mainnet defaults (from SDK address.ts)
+            .set_default("navi_package_id", "0x81c408448d0d57b3e371ea94de1d40bf852784d3e225de1e74acab3e8395c18f")?
+            .set_default("navi_storage_id", "0xbb4e2f4b6205c2e2a2db47aeb4f830796ec7c005f88537ee775986639bc442fe")?
+            .set_default("navi_flashloan_config_id", "0x3672b2bf471a60c30a03325f104f92fb195c9d337ba58072dce764fe2aa5e2dc")?
+            .set_default("navi_incentive_v2_id", "0xf87a8acb8b81d14307894d12595541a73f19933f88e1326d5be349c7a6f7559c")?
+            .set_default("navi_incentive_v3_id", "0x62982dad27fb10bb314b3384d5de8d2ac2d72ab2dbeae5d801dbdb9efa816c80")?
+            .set_default("navi_price_oracle_id", "0x1568865ed9a0b5ec414220e8f79b3d04c77acc82358f6e5ae4635687392ffbef")?
             .set_default("bucket_package_id", "0x3")?
             .set_default("scallop_package_id", "0x4")?
             .set_default("service_fee_bps", 40)?;
@@ -93,7 +106,13 @@ impl Config {
             .set_default("refresh_interval_ms", 10000)?
             .set_default("strategy", "cheapest")?
             .set_default("contract_package_id", "0x1")?
-            .set_default("navi_package_id", "0x2")?
+            // Navi Protocol mainnet defaults
+            .set_default("navi_package_id", "0x81c408448d0d57b3e371ea94de1d40bf852784d3e225de1e74acab3e8395c18f")?
+            .set_default("navi_storage_id", "0xbb4e2f4b6205c2e2a2db47aeb4f830796ec7c005f88537ee775986639bc442fe")?
+            .set_default("navi_flashloan_config_id", "0x3672b2bf471a60c30a03325f104f92fb195c9d337ba58072dce764fe2aa5e2dc")?
+            .set_default("navi_incentive_v2_id", "0xf87a8acb8b81d14307894d12595541a73f19933f88e1326d5be349c7a6f7559c")?
+            .set_default("navi_incentive_v3_id", "0x62982dad27fb10bb314b3384d5de8d2ac2d72ab2dbeae5d801dbdb9efa816c80")?
+            .set_default("navi_price_oracle_id", "0x1568865ed9a0b5ec414220e8f79b3d04c77acc82358f6e5ae4635687392ffbef")?
             .set_default("bucket_package_id", "0x3")?
             .set_default("scallop_package_id", "0x4")?
             .set_default("service_fee_bps", 40)?;
@@ -164,7 +183,13 @@ impl Config {
             strategy: std::env::var("STRATEGY").unwrap_or_else(|_| "cheapest".to_string()),
             contract_package_id: std::env::var("CONTRACT_PACKAGE_ID")
                 .unwrap_or_else(|_| "0x1".to_string()),
-            navi_package_id: std::env::var("NAVI_PACKAGE_ID").unwrap_or_else(|_| "0x2".to_string()),
+            // Navi Protocol mainnet addresses
+            navi_package_id: std::env::var("NAVI_PACKAGE_ID").unwrap_or_else(|_| "0x81c408448d0d57b3e371ea94de1d40bf852784d3e225de1e74acab3e8395c18f".to_string()),
+            navi_storage_id: std::env::var("NAVI_STORAGE_ID").unwrap_or_else(|_| "0xbb4e2f4b6205c2e2a2db47aeb4f830796ec7c005f88537ee775986639bc442fe".to_string()),
+            navi_flashloan_config_id: std::env::var("NAVI_FLASHLOAN_CONFIG_ID").unwrap_or_else(|_| "0x3672b2bf471a60c30a03325f104f92fb195c9d337ba58072dce764fe2aa5e2dc".to_string()),
+            navi_incentive_v2_id: std::env::var("NAVI_INCENTIVE_V2_ID").unwrap_or_else(|_| "0xf87a8acb8b81d14307894d12595541a73f19933f88e1326d5be349c7a6f7559c".to_string()),
+            navi_incentive_v3_id: std::env::var("NAVI_INCENTIVE_V3_ID").unwrap_or_else(|_| "0x62982dad27fb10bb314b3384d5de8d2ac2d72ab2dbeae5d801dbdb9efa816c80".to_string()),
+            navi_price_oracle_id: std::env::var("NAVI_PRICE_ORACLE_ID").unwrap_or_else(|_| "0x1568865ed9a0b5ec414220e8f79b3d04c77acc82358f6e5ae4635687392ffbef".to_string()),
             bucket_package_id: std::env::var("BUCKET_PACKAGE_ID")
                 .unwrap_or_else(|_| "0x3".to_string()),
             scallop_package_id: std::env::var("SCALLOP_PACKAGE_ID")

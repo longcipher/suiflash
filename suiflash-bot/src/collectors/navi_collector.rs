@@ -128,12 +128,12 @@ impl NaviCollector {
         if let Some(cached_fee) = self.get_cached_fee(coin_type).await {
             Ok(cached_fee)
         } else {
-            // Default fallback if coin not found
+            // Default fallback if coin not found - matches Navi's current 0.06% fee
             warn!(
-                "Flash loan fee not found for coin type: {}, using default 80 bps",
+                "Flash loan fee not found for coin type: {}, using default 6 bps (0.06%)",
                 coin_type
             );
-            Ok(80) // Default 0.8% = 80 bps
+            Ok(6) // Default 0.06% = 6 bps (matches Navi documentation)
         }
     }
 

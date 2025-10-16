@@ -1,5 +1,17 @@
 # Navi Protocol Integration Guide
 
+> **⚠️ IMPORTANT: CURRENT STATUS**
+> 
+> This document describes the **intended architecture** for Navi Protocol integration.
+> However, **the current implementation is a MOCK/PLACEHOLDER** and does NOT actually
+> call Navi Protocol's on-chain contracts.
+>
+> **What works**: Configuration, fee rates, API integration, architecture
+> **What's missing**: Actual calls to `flash_loan_with_ctx` and `flash_repay_with_ctx`
+>
+> See `docs/NAVI_INTEGRATION_REVIEW.md` for complete status and `navi_real_example.move`
+> for reference implementation showing how to properly integrate with Navi Protocol.
+
 ## Overview
 
 This document describes the integration of Navi Protocol flash loans into the SuiFlash router contract. The integration provides a unified interface for flash loans across multiple protocols while maintaining protocol-specific optimizations.
